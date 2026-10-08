@@ -1,0 +1,12 @@
+231116_C4M1, incircle num: 15653, total_num: 108815, percentage:0.14384965308091716
+231116_C4M2, incircle num: 4265, total_num: 109358, percentage:0.03900034748258015
+231116_C4M3, incircle num: 5875, total_num: 108867, percentage:0.05396492968484481
+231116_C4M4, incircle num: 21715, total_num: 108597, percentage:0.1999594832269768
+231116_C4M5, incircle num: 13984, total_num: 125683, percentage:0.11126405321324284
+231116_C4M6, incircle num: 6343, total_num: 111027, percentage:0.05713024759743125
+231115_C3M1, incircle num: 11423, total_num: 112473, percentage:0.10156215269442444
+231115_C3M2, incircle num: 4495, total_num: 12013, percentage:0.37417797386164986
+231115_C3M3, incircle num: 10998, total_num: 108247, percentage:0.10160096815616138
+231115_C3M4, incircle num: 20029, total_num: 108757, percentage:0.1841628584826724
+231115_C3M5, incircle num: 14208, total_num: 109987, percentage:0.12917890296125906
+231115_C3M6, incircle num: 15724, total_num: 109723, percentage:0.14330632592984152

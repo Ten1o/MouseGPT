@@ -1,0 +1,191 @@
+{
+    "Empty": [
+        ""
+    ],
+    "front paws close to the mouth": [
+        "front paws are close to the mouth",
+        "front paws are lifted and near the mouth",
+        "close to the mouth",
+        "close to the face",
+        "grooming",
+        "front paws are close to the head"
+    ],
+    "front paws off the ground": [
+        "front paws are off the ground",
+        "front paws are in the air",
+        "front paws are raised off the ground",
+        "front paws are elevated",
+        "front paws are raised",
+        "front paws are lifted off",
+        "front paws are slightly raised off",
+        "front paws of the mouse are in the air",
+        "front paws are slightly elevated",
+        "front paws of the mouse are raised",
+        "front paws are slightly raised",
+        "front paws of the mouse are off the ground",
+        "front paws are both off the ground",
+        "front paws are against the glass wall",
+        "front paws are in contact with the glass wall",
+        "front paws are slightly lifted off",
+        "front paws of the mouse are slightly raised off",
+        "front paws are lifted slightly off",
+        "front paws of the mouse are slightly lifted off",
+        "front paws are close to the ground",
+        "front paws of the mouse are lifted",
+        "forelimbs of the mouse are raised",
+        "forelimbs of the mouse are lifted",
+        "the forelimbs are raised",
+        "front limbs of the mouse are raised",
+        "forelimbs of the mouse are in the air",
+        "front paws of the mouse are elevated",
+        "front paws of the mouse are both off the ground",
+        "front paws of the mouse are slightly raised",
+        "front paws are held up in the air",
+        "front paws of the mouse are slightly elevated",
+        "front paws are slightly off the ground"
+    ],
+    "front paws on the ground": [
+        "front paws are on the ground",
+        "front paws of the mouse are on the ground",
+        "front paws are in contact with the ground",
+        "front paws of the mouse are in contact with the ground",
+        "front paws are both on the ground",
+        "front paws and hind paws are on the ground",
+        "forelimbs are on the ground",
+        "front paws of the mouse are touching the ground",
+        "front paws of the mouse are positioned on the ground",
+        "front left paw is on the ground",
+        "left forelimb is on the ground",
+        "The front paws of the mouse are likely in contact with the ground",
+        "Both the front paws and hind paws of the mouse are on the ground",
+        "front paws are both in contact with the ground",
+        "one front paw is on the ground",
+        "front paws are held close together and are in contact with the ground"
+    ],
+    "front paws are in motion": [
+        "front paws are in motion",
+        "front paws of the mouse are in motion",
+        "forelimbs of the mouse are in motion",
+        "front paws are likely in motion"
+    ],
+    "front paws not visible": [
+        "front paws are not visible",
+        "front paws are not clearly visible",
+        "The front paws of the mouse are not visible",
+        "The front paws of the mouse are not clearly visible",
+        "front paws and hind paws of the mouse are not clearly visible"
+    ],
+    "front paws are held close to the chest": [
+        "front paws are held together in front of the chest",
+        "front paws are held close to the chest",
+        "front paws are held together in front of its chest, not touching the ground",
+        "front paws are held together and close to the chest"
+    ],
+    "front left paw in the air": [
+        "front left paw is in the air",
+        "left forelimb is in the air, indicating movement"
+    ],
+    "hind paws on the ground, supporting the body": [
+        "Both hind paws are on the ground, supporting the body",
+        "The hind paws are on the ground, supporting the body's weight",
+        "The hind paws are on the ground, supporting the mouse's weight.",
+        "The hind paws are on the ground, providing support",
+        "hind paws are in contact with the ground",
+        "The hind paws are also on the ground"
+    ],
+    "front paws close to the body": [
+        "front paws are close to the body",
+        "front paws are held close to the body",
+        "front paws of the mouse are close to its body"
+    ],
+    "climbing": [
+        "mouse is using forelimbs to support itself or climb",
+        "hind paws are in contact with the glass suggesting climbing",
+        "front paws are in contact with the side of the glass chamber",
+        "The front paws are in contact with the wall of the chamber",
+        "front paws are in contact with the wall of the glass chamber",
+        "The front paws are in contact with the wall",
+        "front paws are extended and appear to be touching or reaching towards the glass wall"
+    ],
+    "forelimbs raised asymmetrically": [
+        "left forelimb is raised in the air",
+        "right forelimb is on the ground",
+        "both hind limbs are on the ground",
+        "tail is extended backward",
+        "front left paw is raised in the air",
+        "one is on the ground while the other is slightly raised",
+        "left forelimb is raised and appears to be in the air",
+        "left front paw is on the ground while the right front paw is slightly raised",
+        "left front paw is raised in the air, while the right front paw is on the ground. The hind paws are both on the ground, supporting the body.",
+        "left front paw is raised in the air, while the right front paw is on the ground. The hind paws are both on the ground, providing support.",
+        "left forelimb is raised and extended towards the glass",
+        "The left front paw is raised and slightly bent",
+        "left forelimb is raised and bent",
+        "left front paw is slightly raised",
+        "left front paw is raised in the air, while the right front paw is also raised but higher. Both hind paws are on the ground",
+        "left front paw is raised and appears to be touching the face, while the right front paw is on the ground",
+        "left forelimb is raised and slightly bent, while the right forelimb is also raised and more extended",
+        "left forelimb is likely in motion",
+        "left forelimb is raised and slightly bent, while the right forelimb is also raised but more extended",
+        "front paw is raised, while the other is on the ground",
+        "left front paw is raised and held close to its body, while the right front paw is on the ground. Both hind paws are on the ground",
+        "left forelimb is raised and slightly bent, while the right forelimb is closer to the ground",
+        "left front paw is raised and appears to be in the air, while the right front paw is also raised but closer to the body",
+        "The front left paw is raised and appears to be in the air, while the front right paw is on ground. Both hind paws are on the ground",
+        "The front left paw is raised and appears to be in the air, while the front right paw is on the ground. The hind limbs are both on the ground.",
+        "both against the glass wall",
+        "The front left paw is raised and extended forward, while the front right paw is on the ground. Both hind paws are on the ground, indicating a walking motion",
+        "The front paws are near the mouth, with the right front paw raised and the left front paw on the ground",
+        "left front paw is raised in the air, while the right front paw is closer to the ground. Both hind paws are on the ground",
+        "left front paw is raised in the air, while the right front paw is also raised but slightly lower. Both hind paws are on the ground"
+    ],
+    "hind paws on the ground and front paws close to the body": [
+        "supporting its body",
+        "front paws are positioned close to the body"
+    ],
+    "front left paw off the ground": [
+        "front left paw is lifted off the ground",
+        "left forelimb is raised and slightly bent",
+        "left front paw is raised and appears to be in the air"
+    ],
+    "two paws in different positions": [
+        "left front paw is on the ground while the right front paw is lifted",
+        "front left paw is lifted in the air, while the front right paw is on the ground",
+        "left front paw is on the ground while the right front paw is raised",
+        "one is on the ground while the other is lifted",
+        "one is on the ground while the other is raised",
+        "The front paws are in different positions; one is raised while the other is on the ground. The hind paws are both on the ground, providing support.",
+        "The front paws are in different positions; one is raised and the other is on the ground. The hind paws are both on the ground, supporting the body.",
+        "hind paws are both on the ground, indicating walking motion",
+        "left front paw is on the ground while the right front paw is in the air",
+        "The front paws are in different positions; the left front paw is raised, while the right front paw is on the ground. The hind paws are both on the ground, supporting the body.",
+        "one is raised in the air while the other is on the ground",
+        "The front paws are in different positions; the left front paw is raised, while the right front paw is on the ground. Both hind paws are on the ground, providing support.",
+        "The front paws are in different positions; the left front paw is on the ground while the right front paw is slightly elevated",
+        "The front paws are in different positions; one is on the ground while the other is slightly elevated",
+        "The front paws are in different positions; one is raised and close to the body, while the other is on the ground.",
+        "left front paw is raised, while the right front paw is on the ground",
+        "left forelimb is lifted off the ground while the right forelimb is in contact with the ground",
+        "left forelimb is lifted off the ground",
+        "front left paw is extended forward and slightly raised, while the front right paw is on the ground",
+        "one paw on the ground and the other slightly raised"
+    ],
+    "hind paws on the ground": [
+        "hind paws are on the ground, providing stability",
+        "The hind paws are also close to the body and on the ground",
+        "hind paws are on the ground in both images"
+    ],
+    "four limbs on the ground": [
+        "The hind paws are also on the ground, as indicated by their low speed",
+        "hind limbs are also on the ground",
+        "Both the front and hind paws are on the ground",
+        "limbs appear to be in contact with the ground",
+        "front paws and hind paws of the mouse are on the ground",
+        "Both the front and hind limbs are on the ground"
+    ],
+    "front paws on the glass, hind paws on the ground": [
+        "front paws are in contact with the glass",
+        "front paws are placed against the glass wall",
+        "front paws are both in contact with the glass wall"
+    ]
+}

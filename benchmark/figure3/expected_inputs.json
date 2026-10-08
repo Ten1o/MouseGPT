@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "source_revision": "extended-data-figure3-benchmark-v8-20261009",
+  "files": [
+    {
+      "path": "example_manifest.json",
+      "size_bytes": 22067,
+      "sha256": "484d108f895528c1426994cd1b7e5c1e3c794cb87a59cb4a52a7557643eeba7f"
+    },
+    {
+      "path": "examples/231117_G5_30min_00007684_view1.jpg",
+      "size_bytes": 17456,
+      "sha256": "f53df36a8adab28681aab458097b1476e80a50c648d419ff804794e91ecf0d37"
+    },
+    {
+      "path": "examples/231117_G5_30min_00007684_view2.jpg",
+      "size_bytes": 17714,
+      "sha256": "190f8c99ef925c73205aa946ef3dd42dee3cf5c5447f4903b0bfb6122598fac5"
+    },
+    {
+      "path": "examples/231121_C3M3-2_00038940_view1.jpg",
+      "size_bytes": 64373,
+      "sha256": "4f3b518b7dfa9e5b63ba158668cc01543484033dfc09f8d804081064ad198828"
+    },
+    {
+      "path": "examples/231121_C3M3-2_00038940_view2.jpg",
+      "size_bytes": 58414,
+      "sha256": "c35ba0c6c611d570113e6bd9a2b301d8e532de172aeafa7735da878c4d5b7e2b"
+    },
+    {
+      "path": "source_data/assessment_bindings.csv",
+      "size_bytes": 4608191,
+      "sha256": "9fd512f0bc4c8f4499103b889154f4e799146e78a0ba8917a1b1d0c5a2e8054b"
+    },
+    {
+      "path": "source_data/bottom10_full_frame_ranking.csv",
+      "size_bytes": 127622,
+      "sha256": "d008a902d0d6debb347dfcfdbc9b7aedd5ac349a4c708002a5270deda351b50e"
+    },
+    {
+      "path": "source_data/bottom10_leave_one_identity_out_frames.csv",
+      "size_bytes": 25458,
+      "sha256": "59164a72ce4f11019e98104442cd8a9883eb49276fd4bdc4b1387cbb3d281ef6"
+    },
+    {
+      "path": "source_data/bottom10_leave_one_identity_out_model_means.csv",
+      "size_bytes": 1670,
+      "sha256": "6ef8d79a215625aabf9e716869db554c39df69fa8c2027cc00148684b45e1670"
+    },
+    {
+      "path": "source_data/bottom10_leave_one_identity_out_sensitivity.csv",
+      "size_bytes": 524,
+      "sha256": "2f1d2af0d8fb7d3af0bd6b31185d2623efa1cc4a56e98f9666e14883d1d94b6c"
+    },
+    {
+      "path": "source_data/bottom10_selected_frames.csv",
+      "size_bytes": 15876,
+      "sha256": "5b94ec087f5a59b74530f5052db026f3b808724a7d616595a7cd52e851b5a598"
+    },
+    {
+      "path": "source_data/difficulty_leave_one_model_out.csv",
+      "size_bytes": 262691,
+      "sha256": "61d641024051212dd9cbd3778e1b9fd6268044f65cab45e84a8f22052297be7e"
+    },
+    {
+      "path": "source_data/difficulty_per_model.csv",
+      "size_bytes": 440788,
+      "sha256": "28140146c54149baf05d02992f622fc5d6200752f582fd863e0029d0cd85e98a"
+    },
+    {
+      "path": "source_data/difficulty_rank_sensitivity.csv",
+      "size_bytes": 29699,
+      "sha256": "3dfd25f61b50d44d65f1ec2b5718edd8d1b6ac60337458315fd603a5e10b1c2b"
+    },
+    {
+      "path": "source_data/difficulty_sensitivity.csv",
+      "size_bytes": 829,
+      "sha256": "7053ed5007999f71331607de9fd7a78a534378b52169e7c6dd233b9330728283"
+    },
+    {
+      "path": "source_data/example_frames.csv",
+      "size_bytes": 5244,
+      "sha256": "767bcfea3e50106f3edc2ae26047b1355c198e1cc7c3647f2d397adbfc3f386b"
+    },
+    {
+      "path": "source_data/frame_bindings.csv",
+      "size_bytes": 289138,
+      "sha256": "3f6552e738df3439b16d088a728a453a89edd72596ffa6cf176df146b4217bab"
+    },
+    {
+      "path": "source_data/frame_factualF_difficulty.csv",
+      "size_bytes": 216726,
+      "sha256": "06d6da0bfbf0acfda543c225f7e9300ebe6323f6c7d934c415782302584b044e"
+    },
+    {
+      "path": "source_data/gpt4o_dimensions.csv",
+      "size_bytes": 810,
+      "sha256": "25e1165a8d64c1c440258822406fbd5ad937c3aaad8d5d9d6f53dc4c0add743b"
+    },
+    {
+      "path": "source_data/metric_summary.csv",
+      "size_bytes": 14505,
+      "sha256": "041d5f688b3c44b7dea79b5a0d8e07d1598a5ba9cbcb0bc0ab1fa0fc0f1d2b6b"
+    },
+    {
+      "path": "source_data/model_summary.csv",
+      "size_bytes": 1731,
+      "sha256": "eea04480303a1bc1cdc2e4f8b8a995aff1e407507bf8599908a76ee12f3659ae"
+    },
+    {
+      "path": "source_data/normalization_bindings.csv",
+      "size_bytes": 23766,
+      "sha256": "1f9e9a9367e977819b90889fa83b5795ff40a9429da3105fda11b62181c8ba78"
+    },
+    {
+      "path": "source_data/panel_f_dot_means.csv",
+      "size_bytes": 3651,
+      "sha256": "3d86f085ba6b4171ad3dbee4bd70db30e0eea8086111904b1faa93b5e8fe34a7"
+    },
+    {
+      "path": "source_data/per_frame_scores.csv",
+      "size_bytes": 965511,
+      "sha256": "315f0a499ab7a99ed6cc2802ce807973567f36fedc8dd214b9c32f6bfdfd4068"
+    },
+    {
+      "path": "source_data/recording_counts.csv",
+      "size_bytes": 445,
+      "sha256": "69578cb5d222d1959742c30f710a2c0cf72f1352deabc5dc3cca01b55cbdf485"
+    }
+  ],
+  "description": "Required input files for Extended Data Figure 3. Supply these files separately from the code and preserve the listed relative paths."
+}

@@ -1,0 +1,31 @@
+1. I have a dictionary of behavior categories.
+    The keys are behavior types, and the values are lists which list the keywords of each behavior.
+    
+2. I have n text descriptions. Each description will describe the behavior of a mouse in a glass chamber.
+The dict will be used to classify the descriptions.
+Once a keyword is found in a description, this description will be classified into the corresponding behavior.
+
+3. You task is to update the category dict, because the dictionary cannot cover all cases.
+For example, for the behavior "walking", the description might not have the word "walking", but uses a phrase like "in motion and four limbs in the ground".
+For this case, the phrase should be added to the dict.
+
+4. YOU NEED TO MAKE SURE THAT THIS PHRASE CAN ONLY DESCRIBE THIS BEHAVIOR. FOR EXAMPLE, FRONT PAWS ON GROUND SHOULD NOT BE ADDED TO WALKING, BECAUSE "STATIONARY" CAN BE DESCRIBED IN THIS WAY, TOO. For example, "head upward" should not be a keywords of standing, since it can also be a keyword of "walking", and "rapid movement" does not indicate "running", since grooming is also rapid movement. "in motion with a moderate speed"  does not indicate walking, too. Because the velocity it includes limbs infomation. If front paws in the air, the moue MUST NOT in walking. "hind paws on the ground should not be added to standing, since all other behaviors will have hind paws on the ground.
+
+5. I will give you a description, and existing category dict. You need to determine this description belong to which behavior.
+If this behavior is already in the dict, extract the keyword / short phrase (DO COPY & PASTE, DO NOT MODIFY ANYTHING IN RAW DESCRIPTION. THE SHORTER, THE BETTER. TRY NOT USE SENTENCES UTIL NECESSARY.), and added to the list of this behavior. 
+
+If this behavior is not in the dict, create a new behavior key, and update the list.
+
+6. You should noly return a json with two keys.
+Your return format should be in JSON format, eg.
+{
+    "behavior": xxx,
+    "keyword": xxx,
+    "categories": {
+        "behavior1" :[xxx],
+        "behavior2" :[xxx],     
+        "behavior3" :[xxx],     
+    }
+    
+}
+"keyword" should be the same string as the one added to categories.

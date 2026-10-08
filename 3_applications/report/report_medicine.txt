@@ -1,0 +1,26 @@
+Hallucinogen Behavior Research Results Report
+Overview
+This study compares the behavioral patterns of normal mice (Saline group) with those of mice treated with different hallucinogens (1 mg/kg Psi, 3 mg/kg Psi, 0.2 mg/kg LSD, 2 mg/kg LSD, 0.3 mg/kg MK801). We used a machine learning algorithm to analyze the proportion of mouse behaviors in different treatment groups, and performed a statistical test using two-way ANOVA to reveal the characteristics of mouse behavior produced by different hallucinogens, explore the connection between behavioral subtypes and different hallucinogens, and speculate on the effects of hallucinogens on the nervous system based on different mouse behaviors.
+
+Results of statistical analysis of basic behaviors of different hallucinogens:
+Mice were injected with 1mg/kg Psi, 3mg/kg Psi, 0.2mg/kg LSD, 2mg/kg LSD, 0.3mg/kg MK801 and then tested for behavior. The differences between the different behavioral groups and the saline group were compared. The results showed that 1mg/kg Psi: walking increased, showing more activity
+3mg/kg Psi: stationary increased, standing decreased, showing less activity and less exploration
+0.2mg/kg LSD: stationary increased, showing decreased activity
+2mg/kg LSD: walking decreased, stationary and standing increased, showing more significant decreased activity than 0.2mg/kg LSD
+0.3mg/kg MK801: walking increased, stationary and standing increased, showing increased activity. (*p=0.0252, ****p<0.0001)
+This indicates that LSD has a significant effect on reducing mouse activity, possibly having a sedative effect, and may also directly affect the mouse's motor system. MK801 significantly increased mouse activity, which may lead to anxiety and excitement in mice, making the nervous system more excited. Psilocybin also showed a trend of increased activity, which suggests that the drug does not cause strong sedative or anxiety responses in mice, and has no significant effect on the peripheral nervous system.
+
+Behavioral subtype analysis
+Finally, we performed a more in-depth classification of various behaviors in key limb dimensions, resulting in subtypes of various behaviors. The behavioral subtypes with the highest proportion of different drugs under different basic behaviors were analyzed:
+Standing:
+
+2mg/kg LSD will show fewer head-up movements, indicating a decrease in exploratory behavior in mice
+
+
+Walking:
+
+
+all three hallucinogens showed a trend towards increased front paws on the ground
+
+The existence of these subtypes clearly shows the influence of different hallucinogens on specific mouse postures, suggesting that we should pay more attention to the relationship between these behavioral subtypes and the mechanism of action of hallucinogens in future research.
+

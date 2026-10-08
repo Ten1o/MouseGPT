@@ -1,0 +1,11 @@
+name: peaks
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9
+  - numpy
+  - tqdm
+  - opencv
+  - scipy
+  - matplotlib

@@ -1,0 +1,80 @@
+{
+  "judge": {
+    "provider": "azure",
+    "model": "gpt-6.1-sol",
+    "version": "gpt-6.1-sol|config:2fc1382dd6dfe837dd09c70f01867aada5d6089f4b87ac4f41d62e97e44d0c04",
+    "reasoning_effort": "medium",
+    "execution_config_sha256": "2fc1382dd6dfe837dd09c70f01867aada5d6089f4b87ac4f41d62e97e44d0c04",
+    "calibration_status": "not_established"
+  },
+  "metric_definitions": {
+    "factual_precision": "Per-frame weighted mean of distinct candidate claim correctness credits (0,0.25,0.5,0.75,1), displayed times 100.",
+    "required_fact_recall": "Per-frame weighted mean coverage credits (same quarter-step scale) over every required approved reference fact, displayed times 100.",
+    "factual_f1": "Per-frame harmonic mean of factual_precision and required_fact_recall, on their 0–1 scales, displayed times 100; custom graded factual F-score, not classification F1.",
+    "structure_score": "Frozen judge quarter-step structural adherence score, displayed times 100.",
+    "instruction_score": "Frozen judge quarter-step instruction adherence score, displayed times 100.",
+    "benchmark_index": "100 * frame_factual_f1 * (0.8 + 0.1 * frame_structure_score + 0.1 * frame_instruction_score); components use 0–1 scales. Compute for each frame then arithmetic mean.",
+    "keywords": "Novel factual keyword assertions are assigned a semantic prose home; equivalent repeated propositions are counted once, not as independent keyword facts."
+  },
+  "frozen_rubric": {
+    "id": "rubric_ae5600ba66974e90",
+    "sha256": "eee578b5bd8eda7d802c1543ada34712e08176b0b77b7a9a4dedb7ac1bcd3142",
+    "status": "frozen",
+    "scoring_version": "mousebench.graded-factual-f1.v2",
+    "field_weights": {
+      "Head": 1,
+      "Keywords": 1,
+      "Limb": 1,
+      "Others": 0.5,
+      "Overall": 2,
+      "Torso": 1
+    },
+    "index": {
+      "aggregation": "Mean of per-frame index values on eligible frames; also report recording-balanced means and paired common-frame comparisons. Do not substitute the formula applied to means of component scores.",
+      "base": 0.8,
+      "formula": "100 * factual_f1 * (base + structure_weight * structure_score + instruction_weight * instruction_score)",
+      "instruction_weight": 0.1,
+      "label": "Provisional Graded Quality Index (0–100)",
+      "rationale": "Graded factual F1 is the primary summary. The secondary index uses the same provisional 80/10/10 factors: factual F1 multiplied by 0.8 + 0.1 structure + 0.1 instruction. The grade and field-importance scales, anchors and factors require heldout human calibration. Analytic criteria and error severity add no independent deductions.",
+      "structure_weight": 0.1,
+      "version": "mousebench.graded-quality.v2"
+    },
+    "response_fields": [
+      "Overall",
+      "Head",
+      "Limb",
+      "Torso",
+      "Others",
+      "Keywords"
+    ]
+  },
+  "bootstrap": {
+    "iterations": 10000,
+    "seed": 20261008,
+    "generator": "numpy.random.default_rng PCG64",
+    "resampling_unit": "recording_id, not verified independent animal",
+    "recording_count": 25,
+    "stratified": false,
+    "draw": "Uniform sampling with replacement of 25 of the 25 recordings per replicate; all selected frames and model conditions in each sampled recording travel together.",
+    "shared_across_conditions_and_metrics": true,
+    "point_estimate": "Arithmetic mean of per-frame metric across all 435 frames; composite calculated per frame before averaging.",
+    "replicate_estimator": "Sum of all sampled recording frame scores divided by their total sampled frame count. No version strata, subset means or fixed subset weights.",
+    "interval": "2.5th and 97.5th percentiles; numpy.quantile method=linear",
+    "inference_scope": "Conditional selected-set sensitivity to recording composition, given fixed selected frames, candidate outputs, rubric and one judge realization. Not a calibrated population interval or a model/judge repeatability interval."
+  },
+  "scientific_limitations": [
+    "The 435 frames were manually selected; the benchmark is not a probability sample of deployment behavior.",
+    "The 25 recording identifiers are not automatically independent animals; recording-level resampling does not remove any dependence across recordings from the same animal.",
+    "Frozen reference approval does not demonstrate human-judge agreement. No verified heldout human calibration establishes this judge or custom grade/field/index weights.",
+    "The 42-assessment Codex/Azure pilot covered only three unique frames; those older Codex scores are excluded.",
+    "The composite benchmark index is a custom index, not accuracy. The graded factual F-score is not conventional classification F1.",
+    "The fresh GPT-4o controlled run does not rescore historical original-model labels and does not validate the manuscript historical 78.6% claim.",
+    "Intervals condition on one saved execution and judgment per frame/condition; they omit provider sampling, judge stochasticity, reference uncertainty and unverified animal-level dependence.",
+    "Candidate reasoning conditions differ in effort and token caps; generation settings are provided per run rather than interpreted as an isolated randomized effort effect."
+  ],
+  "source_revision": "extended-data-figure3-benchmark-v8-20261009",
+  "frame_count": 435,
+  "condition_count": 14,
+  "model_identity_count": 8,
+  "recording_count": 25
+}

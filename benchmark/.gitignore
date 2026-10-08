@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+data/*.sqlite3*
+data/objects/
+data/sync-errors.json
+.pycache/
+data/backups/
+*.zip
+data/
+figure3/panels/
+figure3/ExtendedFigure3.*

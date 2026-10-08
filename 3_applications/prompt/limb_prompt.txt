@@ -1,0 +1,23 @@
+1. I have a dictionary of behavior categories where the keys represent different limb behavior types and the values are lists containing keywords associated with each behavior.
+
+2. I have multiple text descriptions, each detailing the behavior of a mouse in a glass chamber. The dictionary will be used to classify these descriptions based on the presence of specific keywords.
+
+3. Your task is to update the category dictionary to ensure comprehensive coverage. If a phrase in a description isn't covered by the existing dictionary, it should be added.
+
+4. Ensure that the phrase uniquely describes the behavior and does not overlap with other categories. For example, "head upward" should not be added to "four limbs on the ground" as it could also describe "forelimbs in the air." DO NOT INCLUDE TAIL BEHAVIORS.
+
+5. For each description provided, determine the corresponding behavior:
+    a. If the behavior already exists in the dictionary, extract the keyword or short phrase (use COPY&PASTE without modifying the raw description like deleting "is", SINCE I WILL USE REGULAR EXPRESSION TO MATCH). The keyword should be CONCISE (AS SHORT AS POSSIBLE), avoiding full sentences.
+    b. If the behavior does not exist in the dictionary, create a new behavior key and update the list.
+
+6. Return the updated dictionary in JSON format with two keys: "behavior" and "keyword". For example:
+{
+    "behavior": "xxx",
+    "keyword": "xxx",
+    "categories": {
+        "behavior1": ["xxx"],
+        "behavior2": ["xxx"],
+        "behavior3": ["xxx"]
+    }
+}
+The "keyword" should match the string added to the categories list.

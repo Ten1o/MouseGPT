@@ -1,0 +1,63 @@
+{
+  "id": "mousegpt-frame-description-workbench",
+  "frame_key": [
+    "capture_date",
+    "group_id",
+    "frame_id"
+  ],
+  "task_scope": "synchronized_frame_description_with_optional_verified_velocity",
+  "selection": "one_unified_manually_selected_frame_collection",
+  "training_independence": "unverified",
+  "input_tracks": [
+    "image_only",
+    "image_velocity"
+  ],
+  "default_prompt": "prompt.txt",
+  "default_rubric": "rubric.json",
+  "ground_truth_policy": "archived expert evidence plus assisted drafts and checks; explicit human review and approval",
+  "gt_assistant": {
+    "display_label": "Codex with GPT-6 Astra, selected by the operator",
+    "execution_mode": "external_codex_claim_and_submit",
+    "api_model_id": null,
+    "workflow_supported": true,
+    "automatic_execution": false
+  },
+  "api_execution": {
+    "providers": [
+      "openai",
+      "azure"
+    ],
+    "modes": [
+      "responses",
+      "chat_completions"
+    ],
+    "explicit_command": "python3 benchmark/workflow.py run BATCH_ID --execute",
+    "default_mode": "dry_run",
+    "automatic_retries": 0,
+    "credentials": "environment_variables_only",
+    "access": "Configure a provider endpoint and supply credentials through environment variables."
+  },
+  "judge_execution": {
+    "supported": true,
+    "executors": [
+      "codex",
+      "openai",
+      "azure"
+    ],
+    "requires": [
+      "current_approved_gt",
+      "frozen_rubric",
+      "bound_input_and_prediction",
+      "pinned_execution_configuration"
+    ],
+    "calibration_status": "not_established"
+  },
+  "primary_metric": "mousebench.graded-factual-f1.v2",
+  "secondary_index": "mousebench.graded-quality.v2",
+  "index_status": "exploratory_secondary_unvalidated_design_choice",
+  "comparison_policy": "same frame, input, current GT content, rubric, judge configuration and input track; historical collections separate",
+  "calibration_policy": "exact verified output/input links, human-adjudicated labels, recording-separated development and heldout groups; no automatic reliability certification",
+  "subject_independence": "recording ID available; unique animal identity not established",
+  "release_policy": "Immutable manifests bind reviewed inputs, approved references, the rubric, and image hashes.",
+  "paper_benchmark_frame_count": 435
+}

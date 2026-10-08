@@ -1,0 +1,5 @@
+numpy==2.3.5
+matplotlib==3.11.2
+Pillow==12.3.0
+fonttools==4.66.1
+pypdf==6.10.0

@@ -1,0 +1,18 @@
+Models:
+- Config: configs/animal_2d_keypoint/topdown_heatmap/sdanimal/td-hm_hrnet-w32_8xb64-210e_sdanimal-256x256.py
+  In Collection: HRNet
+  Metadata:
+    Architecture: &id001
+    - HRNet
+    Training Data: AP-10K
+  Name: td-hm_hrnet-w32_8xb64-210e_mouse_test-256x256
+  Results:
+  - Dataset: sdanimal
+    Metrics:
+      AP: 0.722
+      AP@0.5: 0.935
+      AP@0.75: 0.789
+      AP (L): 0.729
+      AP (M): 0.557
+    Task: Animal 2D Keypoint
+  Weights: https://download.openmmlab.com/mmpose/animal/hrnet/hrnet_w48_ap10k_256x256-18aac840_20211029.pth

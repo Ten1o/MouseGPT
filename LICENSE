@@ -1,0 +1,48 @@
+MouseGPT — license scope
+
+1. MouseGPT material
+
+Except for the exclusions below and material carrying its own license notices,
+original MouseGPT-authored material is licensed under the Creative Commons
+Attribution-NonCommercial-NoDerivatives 4.0 International License
+(CC BY-NC-ND 4.0). This grant covers only rights held by the MouseGPT authors
+and does not relicense third-party material.
+
+Full text: LICENSES/CC-BY-NC-ND-4.0.txt
+License: https://creativecommons.org/licenses/by-nc-nd/4.0/
+
+2. GPL-covered detector components
+
+The following components are excluded from the CC BY-NC-ND grant and are
+distributed under the GNU General Public License, version 3 (GPLv3), with
+applicable third-party copyright and license notices preserved:
+
+- 1_keypoints/mmyolo/
+- 1_keypoints/configs/yolov5/
+- 1_keypoints/configs/_base_/det_p5_tta.py
+- 1_keypoints/configs/_base_/default_runtime copy.py
+
+This exclusion includes MouseGPT modifications and additions to these
+components. No CC noncommercial or no-derivatives conditions apply to the
+GPL-covered material. The exclusion also applies to any other material
+covered by GPLv3; file location does not override its license obligations.
+
+Full text: 1_keypoints/mmyolo/LICENSE
+Scope and provenance: LICENSES/GPL-SCOPE.md
+
+3. Other third-party material
+
+MMPose-derived source retains its Apache License 2.0 terms and notices; see
+1_keypoints/LICENSE. This does not cover the separately listed GPL components.
+SWIFT-derived source retains its Apache License 2.0 terms and notices; see
+2_VLM/swift/LICENSE. Other third-party files retain their applicable notices
+and licenses. The MouseGPT license does not restrict rights granted in the
+underlying third-party material.
+
+4. Separately distributed assets
+
+Datasets and model checkpoints are governed by the licenses supplied with
+those assets. This code-repository notice does not assign a license to model
+checkpoints or override base-model terms.
+
+See THIRD_PARTY_NOTICES.md for component attribution and licensing details.

@@ -1,0 +1,4 @@
+# OpenAI Python SDK client API used by client_test.py; model server is separate.
+openai>=1,<2
+# Optional only for --save-previews:
+# opencv-python

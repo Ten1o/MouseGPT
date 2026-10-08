@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "assets": [
+    {
+      "id": "vlm-demo",
+      "repo_id": "Ten1o/MouseGPT-examples",
+      "repo_type": "dataset",
+      "revision": "ea8672c0827bdf386693ecc3a5dd245b59fde297",
+      "filename": "vlm-demo.zip",
+      "destination": "2_VLM/prompt_test/data",
+      "description": "10 image/prompt examples for VLM inference",
+      "sha256": "eb22b973b8ff1c6c11d0fe129db780cd1f9417d6aa3aaf406fd2c88dd2b6011c",
+      "bytes": 293562,
+      "file_count": 11,
+      "uncompressed_bytes": 357120
+    },
+    {
+      "id": "nlui-demo",
+      "repo_id": "Ten1o/MouseGPT-examples",
+      "repo_type": "dataset",
+      "revision": "ea8672c0827bdf386693ecc3a5dd245b59fde297",
+      "filename": "nlui-demo.zip",
+      "destination": "4_NLUI/data",
+      "description": "Prepared 240419_C11M4 session and 6000 preview frames",
+      "sha256": "4e5ed54ca00ab983633cbead2e2554e1e728d2c2fe14e57ec2363c3a5e64b651",
+      "bytes": 985321393,
+      "file_count": 6001,
+      "uncompressed_bytes": 1387066926
+    }
+  ]
+}

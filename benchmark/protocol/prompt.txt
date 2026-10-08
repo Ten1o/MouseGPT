@@ -1,0 +1,14 @@
+Describe the mouse shown in the supplied synchronized views of one frame. Treat the views as the same instant, not as a time sequence. This is the proposed MouseGPT-395 benchmark prompt v1; it is not claimed to reproduce an archived model request.
+
+Return exactly one JSON object, with exactly these six case-sensitive keys, each containing a nonempty string: Overall, Head, Limb, Torso, Others, Keywords. Do not add Markdown fences, extra keys, or commentary outside the JSON.
+
+Overall: Describe the directly visible body posture and any behavior that can be identified from the allowed evidence. Distinguish a visible pose consistent with a behavior from a demonstrated ongoing action.
+Head: Describe visible head position and orientation relative to the torso or ground, and visible facial or paw contact where discernible.
+Limb: Describe visible forelimb and hindlimb positions and ground contact, and the visible tail position. Do not invent hidden limb positions.
+Torso: Describe visible trunk orientation, spinal curvature, and chest, abdomen or hip contact where discernible.
+Others: Include other relevant, directly supported features of the animal. If nothing additional is discernible, state that briefly. Do not repeat the other sections.
+Keywords: Give a concise comma-separated summary of supported behavioral and postural features already described. Use recognizable animal-behavior terminology. A keyword must not introduce a new factual claim.
+
+Use concise factual English, with enough detail to describe the visible posture accurately. Restrict the description to the animal; spatial contact with a surface may be stated when needed to describe posture. Avoid speculation about intent, mood, treatment, diagnosis, past/future events, or what the animal cannot be seen doing. Name uncertainty or occlusion briefly where relevant. Do not guess merely to fill a section, and do not repeat equivalent claims to add apparent detail.
+
+Evidence rules: The image is the primary evidence. A single synchronized frame cannot by itself establish duration, direction of travel, motion speed, behavioral transitions, or a temporal sequence. If verified velocity information is supplied with this request, use only that supplied information as auxiliary evidence and acknowledge its limitations. Scalar speed alone does not establish travel direction or distinguish running from vertical movement. Do not copy exact speed numbers into the description. If no verified velocity is supplied, do not infer it from the image or from a familiar behavior name. Neither earlier model outputs nor hidden labels are part of your input.

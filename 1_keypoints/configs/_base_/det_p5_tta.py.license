@@ -1,0 +1,9 @@
+SPDX-License-Identifier: GPL-3.0-only
+
+This file is adapted from OpenMMLab MMYOLO.
+Source: https://github.com/open-mmlab/mmyolo/blob/8c4d9dc503dc8e327bec8147e8dc97124052f693/configs/_base_/det_p5_tta.py
+
+The file and MouseGPT modifications are distributed under GPLv3.
+CC BY-NC-ND 4.0 does not apply to this file.
+Full license: ../../mmyolo/LICENSE
+Scope: ../../../LICENSES/GPL-SCOPE.md

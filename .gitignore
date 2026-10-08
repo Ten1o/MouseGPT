@@ -1,0 +1,33 @@
+# Runtime data and model artifacts
+/4_NLUI/data/
+/4_NLUI/workspace/
+/2_VLM/prompt_test/data/
+/2_VLM/prompt_test/output/
+/models/
+/data/
+/workspace/
+/benchmark/data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.h5
+*.safetensors
+*.pth
+*.pt
+*.ckpt
+# Local configuration and generated state
+.env
+.env.*
+!.env.example
+__pycache__/
+.pycache/
+*.pyc
+*.egg-info/
+.venv/
+.pytest_cache/
+.DS_Store
+*.log
+
+# Generated OpenMMLab packaging mirrors
+.mim/
+/outputs/
