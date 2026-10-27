@@ -31,13 +31,13 @@ The HDF5 file provides precomputed descriptions, embeddings, and a clustering hi
 
 ## Launch the interface
 
-Set `OPENAI_API_KEY` in your environment, then run from `4_NLUI/`:
+Copy the repository-root `.env.example` to `.env.local` and fill `MOUSEGPT_API_KEY` for the default official OpenAI API. The same file also configures Stage 2 and 3 requests; see [configuration](../CONFIGURATION.md). Then run from `4_NLUI/`:
 
 ```bash
 python agent.py
 ```
 
-Open **<http://127.0.0.1:7860>**, choose a session, and use the frame slider or chat to explore its behavior. Conversation uses `gpt-4o`; semantic search and label assignment use `text-embedding-3-large`. Queries and relevant descriptions are sent to OpenAI and incur the provider's usage charges.
+Open **<http://127.0.0.1:7860>**, choose a session, and use the frame slider or chat to explore its behavior. By default, conversation uses `gpt-4o`; semantic search and label assignment use `text-embedding-3-large`. Queries and relevant descriptions are sent to the configured provider and may incur usage charges.
 
 | Explore | Example prompt | Method |
 | --- | --- | --- |

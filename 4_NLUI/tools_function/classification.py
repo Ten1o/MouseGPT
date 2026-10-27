@@ -9,7 +9,7 @@ else:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from provider import encode_string_to_feature
     from similarity import cosine_similarity_matrix, validate_vectors
-from runtime_config import validate_frame_ids
+from runtime_config import get_api_key, validate_frame_ids
 
 
 def create_similarity_matrix(data_matrix, classes_feature):
@@ -32,5 +32,6 @@ def classification(h5_file_path, label, api_key):
 
 
 if __name__ == "__main__":
-    import os
-    print(classification("data/240419_C11M4.h5", ["walk", "stand", "stationary"], os.environ["OPENAI_API_KEY"]))
+    print(classification(
+        "data/240419_C11M4.h5", ["walk", "stand", "stationary"],
+        get_api_key()))

@@ -146,7 +146,7 @@ def test_malformed_provider_response_is_bounded_and_timed_out(monkeypatch):
 
 
 def test_authentication_failure_is_not_retried(monkeypatch):
-    post = Mock(return_value=Mock(status_code=401))
+    post = Mock(return_value=Mock(status_code=401, text='unauthorized'))
     monkeypatch.setattr(provider.requests, 'post', post)
     with pytest.raises(RuntimeError, match='HTTP 401'):
         clustering.gpt_request('prompt', ['a'], ['b'], 'not-a-real-key')
@@ -245,7 +245,7 @@ def test_classification_tool_exports_quoted_labels_and_aggregates_duplicates(tmp
     function.decorator_list = []
     namespace = {
         'os': os, 'datetime': datetime, 'glob': glob,
-        'get_api_key': lambda: 'offline-key',
+        'get_api_key': Mock(return_value='offline-key'),
         'tool_config': {'file_path': 'not-opened.h5', 'img_folder': str(tmp_path), 'workspace': str(tmp_path / 'output')},
         'classification_func': Mock(return_value={'00000008': 0, '00000016': 1, '00000024': 2}),
         'export_cluster_labels': clustering.export_cluster_labels,
@@ -253,6 +253,7 @@ def test_classification_tool_exports_quoted_labels_and_aggregates_duplicates(tmp
     # Run the real tool body with its provider boundary mocked; LangChain is unnecessary.
     exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
     result = namespace['tool_classification'](['walking, slowly', 'resting "still"', 'resting "still"'])
+    namespace['get_api_key'].assert_called_once_with('EMBEDDING')
     with Path(result['save_path']).open(newline='') as handle:
         assert list(csv.reader(handle)) == [
             ['frame_id', 'behavior'], ['00000008', 'walking, slowly'],

@@ -14,6 +14,10 @@ import argparse
 
 from llm_utils import parse_json_object
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import load_config, sdk_client
 
 
 
@@ -112,7 +116,7 @@ def determine_cluster_merges(most_common_words, new_cluster_names_dict):
     
     
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model=load_config("ANALYSIS", require_key=False).model,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
@@ -259,8 +263,7 @@ def main(args):
         raise ValueError("Use --downscale 1 for per-frame HDF5 output.")
     if args.max_attempts < 1:
         raise ValueError("--max_attempts must be positive.")
-    from openai import OpenAI
-    client = OpenAI(max_retries=0, timeout=60)
+    client = sdk_client(load_config("ANALYSIS"), max_retries=0, timeout=60)
     features, descriptions, images_a, images_b, description_df, projection, Z, title, group_names = load_groups(
         args.model_name, args.min_dist, args.downscale, args.n_neigh, args.group_config,
         workspace=args.workspace, npy_folder=args.npy_folder, img_workspace=args.img_workspace,
