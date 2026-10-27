@@ -2,7 +2,7 @@ import pandas as pd
 import json
 from scipy.cluster.hierarchy import ClusterNode, to_tree
 from tools_function.cluster_utils import CLUSTER_CACHE_VERSION, bfs_traverse_print, save_des_labels
-from runtime_config import validate_frame_ids
+from runtime_config import get_api_key, validate_frame_ids
 import os
 
 
@@ -58,4 +58,5 @@ def cluster(h5_file_path, img_folder, api_key):
 
 
 if __name__ == '__main__':
-    print(cluster('data/240419_C11M4.h5', 'data/240419_C11M4_imgs', os.environ['OPENAI_API_KEY']))
+    print(cluster(
+        'data/240419_C11M4.h5', 'data/240419_C11M4_imgs', get_api_key()))

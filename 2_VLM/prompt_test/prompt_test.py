@@ -4,6 +4,10 @@ import argparse
 import json
 import os
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from mousegpt_config import read_env_file
 
 
 def insert_newlines(text, interval=60):
@@ -35,7 +39,9 @@ def main():
     parser.add_argument("--log-folder", required=True, type=Path)
     parser.add_argument("--output-folder", required=True, type=Path)
     parser.add_argument("--base-url", default="http://localhost:8000/v1")
-    parser.add_argument("--api-key", default=os.environ.get("OPENAI_API_KEY", "EMPTY"))
+    parser.add_argument("--api-key", default=(os.environ.get("MOUSEGPT_SERVING_API_KEY")
+                                             or read_env_file().get("MOUSEGPT_SERVING_API_KEY")
+                                             or "EMPTY"))
     parser.add_argument("--model", help="Served model ID; discovered from the endpoint when omitted")
     args = parser.parse_args()
 

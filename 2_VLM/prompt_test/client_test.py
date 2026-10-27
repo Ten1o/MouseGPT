@@ -10,6 +10,10 @@ import json
 import os
 from pathlib import Path
 import textwrap
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from mousegpt_config import read_env_file
 
 HERE = Path(__file__).resolve().parent
 
@@ -82,7 +86,7 @@ def main(argv=None):
     parser.add_argument("--output-dir", type=Path, default=HERE / "output")
     parser.add_argument("--base-url", default=os.environ.get("MOUSEGPT_BASE_URL", "http://localhost:8000/v1"))
     parser.add_argument("--model", help="Served model ID; auto-select only when exactly one is available")
-    parser.add_argument("--api-key-env", default="MOUSEGPT_API_KEY", help="Environment variable containing the server API key")
+    parser.add_argument("--api-key-env", default="MOUSEGPT_SERVING_API_KEY", help="Environment variable containing the SWIFT server API key")
     parser.add_argument("--timeout", type=float, default=300.0, help="Request timeout in seconds")
     parser.add_argument("--limit", type=int, help="Run only the first N records")
     parser.add_argument("--save-previews", action="store_true", help="Save annotated first-image previews; requires opencv-python")
@@ -104,7 +108,8 @@ def main(argv=None):
 
     from openai import OpenAI
 
-    client = OpenAI(api_key=os.environ.get(args.api_key_env) or "EMPTY",
+    serving_key = os.environ.get(args.api_key_env) or read_env_file().get(args.api_key_env) or "EMPTY"
+    client = OpenAI(api_key=serving_key,
                     base_url=args.base_url, timeout=args.timeout)
     model = args.model
     if model is None:

@@ -10,9 +10,13 @@ import os
 from pathlib import Path
 import tempfile
 import time
+import sys
 
 import requests
 from tqdm import tqdm
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from mousegpt_config import http_request_config, load_config
 
 
 DESCRIPTION_FIELDS = ("Overall", "Head", "Limb", "Torso", "Others", "Keywords")
@@ -114,15 +118,28 @@ def paired_images(data_folder):
     return [(cameras[0][frame], cameras[1][frame]) for frame in sorted(cameras[0])]
 
 
-def request_description(payload, api_key, max_attempts=3):
+def resolve_api(api_key, model):
+    config = load_config("VISION", overrides={k: v for k, v in
+                         {"api_key": api_key, "model": model}.items() if v is not None})
+    url, headers = http_request_config(config, "chat/completions")
+    identity = {"provider": config.provider, "endpoint": config.endpoint,
+                "model": config.model, "api_version": config.api_version}
+    return url, headers, identity
+
+
+def request_description(payload, url, headers=None, max_attempts=3):
     """Retry only transient transport/server errors within a fixed attempt limit."""
+    if headers is None:
+        # Preserve the earlier direct-call form: request_description(payload, api_key).
+        url, headers, _ = resolve_api(url, payload.get("model"))
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
     for attempt in range(max_attempts):
         try:
             response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}"}, json=payload,
+                url,
+                headers=headers,
+                json=payload,
                 timeout=(10, 120),
             )
         except (requests.Timeout, requests.ConnectionError):
@@ -133,7 +150,9 @@ def request_description(payload, api_key, max_attempts=3):
                 return response.json()
             transient = response.status_code == 429 or 500 <= response.status_code < 600
             if not transient or attempt + 1 == max_attempts:
-                raise RuntimeError(f"Description API returned HTTP {response.status_code}")
+                detail = response.text[:1000] if isinstance(response.text, str) else ""
+                raise RuntimeError(
+                    f"Description API returned HTTP {response.status_code}: {detail}")
         time.sleep(min(2 ** attempt, 10))
     raise RuntimeError("Description API attempts exhausted")
 
@@ -144,8 +163,11 @@ def json_digest(value):
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
 
 
-def process_images(file1, file2, data_folder, velocity_list, api_key, max_attempts=3,
-                   model="gpt-4o-2024-05-13"):
+def process_images(file1, file2, data_folder, velocity_list, api_key=None, max_attempts=3,
+                   model=None):
+    config = load_config("VISION", overrides={k: v for k, v in
+                         {"api_key": api_key, "model": model}.items() if v is not None})
+    model = config.model
     file1, file2 = Path(file1), Path(file2)
     root = Path(data_folder)
     output_basename = f"{file1.stem}.json"
@@ -170,8 +192,20 @@ def process_images(file1, file2, data_folder, velocity_list, api_key, max_attemp
                      {"role": "user", "content": content}],
         "seed": 1, "temperature": 0, "max_tokens": 2000,
     }
+    url, headers, api_identity = resolve_api(api_key, model)
+    if api_identity["provider"] == "azure_openai":
+        # Current Azure reasoning/chat deployments use max_completion_tokens.
+        payload["max_completion_tokens"] = payload.pop("max_tokens")
+        # The supplied Azure deployment sample does not advertise these options.
+        payload.pop("seed", None)
+        payload.pop("temperature", None)
+    elif api_identity["provider"] != "openai":
+        # Sampling controls vary across compatible providers (Claude, for
+        # example, may reject temperature=0). Let the model use its defaults.
+        payload.pop("seed", None)
+        payload.pop("temperature", None)
     log_path = root / "log" / output_basename
-    request_hash = json_digest(payload)
+    request_hash = json_digest({"api": api_identity, "payload": payload})
     if raw_path.exists() and log_path.exists():
         try:
             cached = json.loads(raw_path.read_text(encoding="utf-8"))
@@ -184,10 +218,11 @@ def process_images(file1, file2, data_folder, velocity_list, api_key, max_attemp
                 return description_path
         except (ValueError, TypeError, AttributeError):
             pass
-    response = request_description(payload, api_key, max_attempts)
+    response = request_description(payload, url, headers, max_attempts)
     # Bind both files to the same request and response, including interrupted writes.
     write_json(raw_path, response)
-    write_json(log_path, {**payload, "_mousegpt_cache": {
+    write_json(log_path, {**payload, "_mousegpt_api": api_identity,
+                          "_mousegpt_cache": {
         "request_sha256": request_hash, "response_sha256": json_digest(response),
     }})
     description = parse_description(response)
@@ -195,10 +230,10 @@ def process_images(file1, file2, data_folder, velocity_list, api_key, max_attemp
     return description_path
 
 
-def run_requests(data_folder, api_key, max_attempts=3, workers=10,
-                 model="gpt-4o-2024-05-13"):
-    if not api_key:
-        raise ValueError("Set OPENAI_API_KEY or supply --api")
+def run_requests(data_folder, api_key=None, max_attempts=3, workers=10,
+                 model=None):
+    load_config("VISION", overrides={k: v for k, v in
+                {"api_key": api_key, "model": model}.items() if v is not None})
     if max_attempts < 1 or workers < 1:
         raise ValueError("max_attempts and workers must be at least 1")
     pairs = paired_images(data_folder)
@@ -226,14 +261,14 @@ def run_requests(data_folder, api_key, max_attempts=3, workers=10,
         raise RuntimeError(f"{len(failures)} frame(s) failed: " + "; ".join(failures))
     return len(pairs)
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_folder", required=True, help="Folder containing pre_images and velocity.json")
-    parser.add_argument("--api", default=os.environ.get("OPENAI_API_KEY"), help="API key; defaults to OPENAI_API_KEY")
+    parser.add_argument(
+        "--api", help="Optional key override; defaults to repository-root .env.local")
     parser.add_argument("--max-attempts", type=int, default=3, help="Maximum attempts per frame for transient errors")
     parser.add_argument("--workers", type=int, default=10, help="Concurrent image-pair requests")
-    parser.add_argument("--model", default="gpt-4o-2024-05-13", help="Model identifier")
+    parser.add_argument("--model", help="Optional vision model override")
     args = parser.parse_args()
     run_requests(args.data_folder, args.api, args.max_attempts, args.workers, args.model)
 

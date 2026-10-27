@@ -28,6 +28,11 @@ The [benchmark toolkit](benchmark/README.md) provides a local workbench for fram
 
 ## Getting started
 
+For API-backed workflows, copy `.env.example` to `.env.local` at the
+repository root and fill `MOUSEGPT_API_KEY`. The default service is the
+official OpenAI API. [Configuration guide](CONFIGURATION.md) explains optional
+Azure/compatible endpoints and separate settings for different stages.
+
 ### 1. Clone the repository
 
 The example downloader and input validation require Python 3.10 or newer. They do not require a GPU.
@@ -36,6 +41,14 @@ The example downloader and input validation require Python 3.10 or newer. They d
 git clone https://github.com/Ten1o/MouseGPT.git
 cd MouseGPT
 python -m pip install -r requirements-assets.txt
+```
+
+If you already have data, this read-only check suggests where to start and
+whether that stage's API role is configured. It does not process files or make
+an API request:
+
+```bash
+python scripts/check_workflow.py --input /path/to/session
 ```
 
 ### 2. Inspect the VLM examples
@@ -74,7 +87,7 @@ Each stage has its own dependencies. Use the environment described in that stage
 | Download examples and validate VLM inputs | Python 3.10+; no model checkpoint or GPU |
 | Pose estimation and MouseGPT inference | Compatible checkpoints, model configuration files, and a CUDA/PyTorch environment |
 | Analyze prepared descriptions and embeddings | The Stage 3 scientific Python environment; API credentials for model-assisted operations |
-| Run the natural-language interface | The Stage 4 environment, a paired HDF5/image session, and `OPENAI_API_KEY` |
+| Run the natural-language interface | The Stage 4 environment, a paired HDF5/image session, and `.env.local` with `MOUSEGPT_API_KEY` |
 | Use the benchmark workbench | Python 3.12+; figure rendering has additional dependencies listed in its guide |
 
 The repository includes MouseGPT integrations with MMPose, MMYOLO, and SWIFT. Install the bundled sources where instructed so that the project-specific configurations and dataset registrations are available. Provider-assisted annotation and analysis send the selected inputs to the configured service and may incur API charges.

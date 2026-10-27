@@ -25,7 +25,7 @@ conda activate mgpt
 
 The environment file includes Linux system packages. On other platforms, adapt those packages to the target operating system. Run the commands below from `3_applications/`.
 
-API-backed workflows read `OPENAI_API_KEY` from the environment. They send the selected descriptions or cohort data to OpenAI and incur the provider's usage charges. Local anomaly ranking, session packaging, and dimensionality reduction do not require an API key.
+API-backed workflows read the repository-root `.env.local` through the shared configuration loader. For the default official OpenAI API, copy `.env.example` there and fill `MOUSEGPT_API_KEY`; see [configuration](../CONFIGURATION.md) for optional role-specific services. They send selected descriptions or cohort data to the provider and may incur usage charges. Local anomaly ranking, session packaging, and dimensionality reduction do not require an API key.
 
 ## Try the prepared session
 

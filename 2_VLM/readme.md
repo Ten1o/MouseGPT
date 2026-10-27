@@ -66,7 +66,7 @@ python 2_VLM/prompt_test/client_test.py \
   --base-url http://localhost:8000/v1 --limit 1
 ```
 
-Remove `--limit 1` to process all examples. The client selects the model automatically if the endpoint advertises exactly one model; otherwise specify `--model <served-model-id>`. Set `MOUSEGPT_API_KEY` if your server requires authentication.
+Remove `--limit 1` to process all examples. The client selects the model automatically if the endpoint advertises exactly one model; otherwise specify `--model <served-model-id>`. Set `MOUSEGPT_SERVING_API_KEY` if your SWIFT server requires authentication; this is separate from the repository-wide `MOUSEGPT_API_KEY` used for external model APIs.
 
 Images are transmitted as base64 using the bundled SWIFT protocol. The server does not need access to the client's filesystem. The endpoint must support SWIFT's `images` request field.
 
@@ -117,12 +117,11 @@ The script creates 512 × 512 image crops under `pre_images/data3/` and `pre_ima
 
 ### 3. Generate structured annotations
 
-`prompt_request.py` sends synchronized image pairs and velocity context to the OpenAI API. Install `requests` and `tqdm`, set `OPENAI_API_KEY`, and choose an image-capable model available to your account:
+`prompt_request.py` sends synchronized image pairs and velocity context to the configured vision API. Install `requests` and `tqdm`, copy the repository-root `.env.example` to `.env.local`, and fill `MOUSEGPT_API_KEY` for the default official OpenAI API. Set `MOUSEGPT_VISION_MODEL` in the same file if the default is unavailable:
 
 ```bash
 python 2_VLM/data_prepareation/prompt_request.py \
-  --data_folder /path/to/session \
-  --model YOUR_VISION_MODEL
+  --data_folder /path/to/session
 ```
 
 Camera frame IDs and velocity records must match. Each validated description contains `Overall`, `Head`, `Limb`, `Torso`, `Others`, and `Keywords`. Raw API responses are saved in `raw_descriptions/`, and validated JSON objects in `descriptions/`.

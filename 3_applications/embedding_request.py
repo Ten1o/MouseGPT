@@ -7,10 +7,14 @@ import os
 from pathlib import Path
 import tempfile
 import time
+import sys
 
 import numpy as np
 import requests
 from tqdm import tqdm
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import http_request_config, load_config
 
 from create_h5 import description_paths_by_id, description_text, load_data_matrix, read_description
 
@@ -18,19 +22,31 @@ from create_h5 import description_paths_by_id, description_text, load_data_matri
 EMBEDDING_MODEL = "text-embedding-3-large"
 
 
+def resolve_embedding_api(api_key):
+    config = load_config("EMBEDDING", overrides={"api_key": api_key} if api_key else None)
+    url, headers = http_request_config(config, "embeddings")
+    identity = {"provider": config.provider, "endpoint": config.endpoint,
+                "model": config.model, "api_version": config.api_version}
+    return url, headers, identity
+
+
 def get_embeddings(content, api_key, *, max_attempts=3, retry_delay=1.0, timeout=30.0):
     if max_attempts < 1 or retry_delay < 0 or timeout <= 0:
         raise ValueError("Use positive max_attempts and timeout, and nonnegative retry_delay.")
+    url, headers, api_identity = resolve_embedding_api(api_key)
+    payload = {"input": content}
+    if api_identity["provider"] != "azure_openai":
+        payload["model"] = api_identity["model"]
     error = None
     for attempt in range(max_attempts):
         try:
             response = requests.post(
-                "https://api.openai.com/v1/embeddings",
-                headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
-                json={"input": content, "model": EMBEDDING_MODEL}, timeout=timeout,
+                url, headers=headers, json=payload, timeout=timeout,
             )
             if 400 <= response.status_code < 500 and response.status_code not in (408, 429):
-                raise RuntimeError(f"Embedding request rejected with HTTP {response.status_code}.")
+                raise RuntimeError(
+                    f"Embedding request rejected with HTTP {response.status_code}: "
+                    f"{response.text[:1000]}")
             response.raise_for_status()
             vector = np.asarray(response.json()["data"][0]["embedding"], dtype=float)
             if vector.shape != (3072,) or not np.isfinite(vector).all():
@@ -48,13 +64,16 @@ def process_file(filename, folder_path, out_folder, api_key, **request_options):
     content = description_text(read_description(source))
     output = Path(out_folder) / f"{source.stem}_des.csv"
     metadata_path = Path(out_folder) / ".embedding-cache" / f"{source.stem}.json"
-    request_json = json.dumps({"input": content, "model": EMBEDDING_MODEL}, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    _, _, api_identity = resolve_embedding_api(api_key)
+    request_json = json.dumps(
+        {"api": api_identity, "input": content, "model": api_identity["model"]},
+        sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     request_hash = hashlib.sha256(request_json.encode("utf-8")).hexdigest()
     if output.exists() and metadata_path.exists():
         try:
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
             if (metadata.get("request_sha256") == request_hash
-                    and metadata.get("model") == EMBEDDING_MODEL
+                    and metadata.get("model") == api_identity["model"]
                     and metadata.get("vector_sha256") == hashlib.sha256(output.read_bytes()).hexdigest()):
                 load_data_matrix([output])
                 return output
@@ -69,7 +88,8 @@ def process_file(filename, folder_path, out_folder, api_key, **request_options):
     try:
         np.savetxt(temporary, vector, delimiter=",")
         metadata = {
-            "model": EMBEDDING_MODEL,
+            "model": api_identity["model"],
+            "api": api_identity,
             "request_sha256": request_hash,
             "vector_sha256": hashlib.sha256(Path(temporary).read_bytes()).hexdigest(),
         }
@@ -113,15 +133,13 @@ def process_directory(data_folder, api_key, *, max_workers=8, **request_options)
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data_folder", required=True)
-    parser.add_argument("--api", help="Optional override; prefer OPENAI_API_KEY.")
+    parser.add_argument("--api", help="Optional key override; defaults to repository-root .env.local")
     parser.add_argument("--max_attempts", type=int, default=3)
     parser.add_argument("--max_workers", type=int, default=8)
     parser.add_argument("--retry_delay", type=float, default=1.0)
     parser.add_argument("--timeout", type=float, default=30.0)
     args = parser.parse_args()
-    api_key = args.api or os.environ.get("OPENAI_API_KEY")
-    if not api_key:
-        parser.error("Set OPENAI_API_KEY before requesting embeddings.")
+    api_key = load_config("EMBEDDING", overrides={"api_key": args.api} if args.api else None).api_key
     process_directory(args.data_folder, api_key, max_workers=args.max_workers, max_attempts=args.max_attempts, retry_delay=args.retry_delay, timeout=args.timeout)
 
 

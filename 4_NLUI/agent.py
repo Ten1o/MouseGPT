@@ -10,11 +10,12 @@ import pandas as pd
 
 from runtime_config import (
     WORKSPACE_DIR, available_sessions, configure_tracing,
-    get_api_key, image_files, session_config, validate_frame_ids,
+    image_files,
+    session_config, validate_frame_ids,
 )
+from mousegpt_config import load_config
 
 configure_tracing()
-get_api_key()
 
 from tools import tool_cluster, tool_behavior, tool_search, tool_outlier, tool_classification
 from langchain_experimental.tools import PythonREPLTool
@@ -22,10 +23,10 @@ import tools
 
 gpt_tools = [tool_cluster, PythonREPLTool(), tool_behavior, tool_search, tool_outlier, tool_classification]
 
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 
-from langchain.agents import create_openai_functions_agent
+from langchain.agents import create_tool_calling_agent
 
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -50,7 +51,26 @@ prompt = ChatPromptTemplate.from_messages([
     MessagesPlaceholder("agent_scratchpad"),
 ])
 
-agent = create_openai_functions_agent(ChatOpenAI(model="gpt-4o", temperature=0), gpt_tools, prompt)
+agent_config = load_config("AGENT")
+if agent_config.provider == "azure_openai":
+    chat_model = AzureChatOpenAI(
+        azure_endpoint=agent_config.endpoint,
+        azure_deployment=agent_config.model,
+        api_version=agent_config.api_version,
+        api_key=agent_config.api_key,
+        # Some Azure deployments only accept the model default.  Older
+        # langchain-openai releases otherwise serialize their 0.7 default.
+        temperature=1,
+    )
+else:
+    chat_model = ChatOpenAI(
+        model=agent_config.model,
+        api_key=agent_config.api_key,
+        **({"temperature": 0} if agent_config.provider == "openai" else {}),
+        **({"base_url": agent_config.endpoint} if agent_config.provider != "openai" else {}),
+    )
+
+agent = create_tool_calling_agent(chat_model, gpt_tools, prompt)
 
 agent_executor = AgentExecutor(
     agent=agent, 
