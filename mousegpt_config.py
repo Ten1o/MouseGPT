@@ -166,7 +166,7 @@ def _validate_endpoint(provider, endpoint):
 
 
 def load_config(role, *, overrides=None, env=None, env_file=CONFIG_FILE,
-                require_key=True):
+                require_key=True, validate_capabilities=True):
     """Resolve one role with CLI > role env > role file > shared env > shared file.
 
     Legacy environment variables are fallbacks when no new value exists.
@@ -237,9 +237,9 @@ def load_config(role, *, overrides=None, env=None, env_file=CONFIG_FILE,
         raise ValueError(f"Set MOUSEGPT_{role}_API_VERSION for Azure OpenAI.")
     if provider != "azure_openai":
         api_version = None
-    if role == "PHENOTYPE" and provider != "openai":
+    if validate_capabilities and role == "PHENOTYPE" and provider != "openai":
         raise ValueError("PHENOTYPE currently requires the official OpenAI Responses API with Code Interpreter.")
-    if role == "EMBEDDING" and provider == "anthropic":
+    if validate_capabilities and role == "EMBEDDING" and provider == "anthropic":
         raise ValueError("Anthropic does not provide an embedding endpoint; configure EMBEDDING with another provider.")
     return ProviderConfig(role, provider, endpoint, model, api_version, api_key or "")
 

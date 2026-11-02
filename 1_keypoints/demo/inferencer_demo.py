@@ -1,6 +1,14 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 from argparse import ArgumentParser
 from typing import Dict
+from pathlib import Path
+import sys
+import os
+
+# This entry point depends on MouseGPT's bundled MMPose customizations.
+# Running an absolute script path otherwise puts demo/, not 1_keypoints/, first.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+os.environ.setdefault('NO_ALBUMENTATIONS_UPDATE', '1')
 
 from mmpose.apis.inferencers import MMPoseInferencer, get_model_aliases
 # from mmpose.apis.inferencers import MMPoseInferencer, get_model_aliases

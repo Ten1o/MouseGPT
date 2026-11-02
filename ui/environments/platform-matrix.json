@@ -1,0 +1,175 @@
+{
+  "updated": "2026-11-02",
+  "limits": {
+    "macos_minimum": "14.0",
+    "linux_libc": "glibc >= 2.28",
+    "pose": "manual only"
+  },
+  "recipes": [
+    {
+      "platform": "windows-x86_64",
+      "profile": "core",
+      "release": "2026.10.29.2",
+      "python": "3.12.11",
+      "lock": "core.lock",
+      "lock_sha256": "b22c3c6ff50a6b5822bfdec9b570e9c163de5e7035de33b5c4b66796952e5062",
+      "packages": 62,
+      "notable_versions": {
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "numba": "0.68.1",
+        "openai": "3.26.1"
+      },
+      "runtime_validation": "existing-windows-evidence"
+    },
+    {
+      "platform": "windows-x86_64",
+      "profile": "agent",
+      "release": "2026.10.29.1",
+      "python": "3.10.18",
+      "lock": "agent.lock",
+      "lock_sha256": "dc6dc3e351d5efcacf44942adcf79a0c39d0fb563a5786e391fe08aa77fd3b67",
+      "packages": 110,
+      "notable_versions": {
+        "numpy": "1.26.4",
+        "tables": "3.8.0",
+        "blosc2": "2.0.0",
+        "openai": "1.35.4"
+      },
+      "runtime_validation": "existing-windows-evidence"
+    },
+    {
+      "platform": "linux-x86_64",
+      "profile": "core",
+      "release": "2026.10.29.2",
+      "python": "3.12.11",
+      "lock": "core-linux-x86_64.lock",
+      "lock_sha256": "89a824dce87a3ec19e33a9663c95479d05fc4106d6a5d384e87419f4a1e7e5aa",
+      "packages": 61,
+      "notable_versions": {
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "numba": "0.68.1",
+        "openai": "3.26.1"
+      },
+      "runtime_validation": "user-confirmed-ubuntu-scope; other-linux-pending"
+    },
+    {
+      "platform": "linux-x86_64",
+      "profile": "agent",
+      "release": "2026.10.29.1",
+      "python": "3.10.18",
+      "lock": "agent-linux-x86_64.lock",
+      "lock_sha256": "879bc39512be93d4c7230f8a5321d8cf11e09c9e4e7a202dd5984c3256334bef",
+      "packages": 110,
+      "notable_versions": {
+        "numpy": "1.26.4",
+        "tables": "3.8.0",
+        "blosc2": "2.0.0",
+        "openai": "1.35.4"
+      },
+      "runtime_validation": "user-confirmed-ubuntu-scope; other-linux-pending"
+    },
+    {
+      "platform": "linux-aarch64",
+      "profile": "core",
+      "release": "2026.10.29.2",
+      "python": "3.12.11",
+      "lock": "core-linux-aarch64.lock",
+      "lock_sha256": "3a7fcd9456e58f9462b3d8af8434560bf92dfd21d35b9243cb1a54706eedade6",
+      "packages": 61,
+      "notable_versions": {
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "numba": "0.68.1",
+        "openai": "3.26.1"
+      },
+      "runtime_validation": "pending-real-machine"
+    },
+    {
+      "platform": "linux-aarch64",
+      "profile": "agent",
+      "release": "2026.10.29.1",
+      "python": "3.10.18",
+      "lock": "agent-linux-aarch64.lock",
+      "lock_sha256": "80bde2c6da32fefc5e5202f6ae9edeb11bee834ca111078003bc5d2a9336a231",
+      "packages": 110,
+      "notable_versions": {
+        "numpy": "1.26.4",
+        "tables": "3.8.0",
+        "blosc2": "2.0.0",
+        "openai": "1.35.4"
+      },
+      "runtime_validation": "pending-real-machine"
+    },
+    {
+      "platform": "macos-x86_64",
+      "profile": "core",
+      "release": "2026.11.02.1",
+      "python": "3.12.11",
+      "lock": "core-macos-x86_64.lock",
+      "lock_sha256": "4f74b151611729ee17db5e82ee60ed114c32627071ff47d305e52447ac833e6a",
+      "packages": 61,
+      "notable_versions": {
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "numba": "0.61.2",
+        "openai": "3.26.1"
+      },
+      "runtime_validation": "pending-real-machine"
+    },
+    {
+      "platform": "macos-x86_64",
+      "profile": "agent",
+      "release": "2026.10.29.1",
+      "python": "3.10.18",
+      "lock": "agent-macos-x86_64.lock",
+      "lock_sha256": "80bde2c6da32fefc5e5202f6ae9edeb11bee834ca111078003bc5d2a9336a231",
+      "packages": 110,
+      "notable_versions": {
+        "numpy": "1.26.4",
+        "tables": "3.8.0",
+        "blosc2": "2.0.0",
+        "openai": "1.35.4"
+      },
+      "runtime_validation": "pending-real-machine"
+    },
+    {
+      "platform": "macos-arm64",
+      "profile": "core",
+      "release": "2026.10.29.2",
+      "python": "3.12.11",
+      "lock": "core-macos-arm64.lock",
+      "lock_sha256": "3a7fcd9456e58f9462b3d8af8434560bf92dfd21d35b9243cb1a54706eedade6",
+      "packages": 61,
+      "notable_versions": {
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "numba": "0.68.1",
+        "openai": "3.26.1"
+      },
+      "runtime_validation": "pending-real-machine"
+    },
+    {
+      "platform": "macos-arm64",
+      "profile": "agent",
+      "release": "2026.11.02.1",
+      "python": "3.10.18",
+      "lock": "agent-macos-arm64.lock",
+      "lock_sha256": "b6e002a5e75cbce9d53b4887bb2a267b6f121d8b8bfefa6f0bf97a244237f173",
+      "packages": 109,
+      "notable_versions": {
+        "numpy": "1.26.4",
+        "tables": "3.10.1",
+        "blosc2": "2.7.1",
+        "openai": "1.35.4"
+      },
+      "runtime_validation": "pending-real-machine"
+    }
+  ]
+}

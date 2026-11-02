@@ -1,0 +1,15 @@
+# Core CPU/API workflow. Python 3.12.11, Windows x64.
+numpy==2.2.6
+pandas==2.3.2
+scipy==1.16.1
+scikit-learn==1.7.1
+tables==3.10.1
+Pillow==11.3.0
+requests==2.32.5
+openai==3.26.1
+openpyxl==3.1.5
+tqdm==4.67.1
+umap-learn==0.5.9.post2
+opencv-python-headless==4.12.0.88
+imageio-ffmpeg==0.6.0
+matplotlib==3.10.1

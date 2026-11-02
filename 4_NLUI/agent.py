@@ -226,4 +226,4 @@ if __name__ == "__main__":
 
     # Tool configuration is shared in this research demo; serialize requests.
     demo.queue(default_concurrency_limit=1)
-    demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+    demo.launch(server_name="127.0.0.1", server_port=int(os.environ.get('MOUSEGPT_NLUI_PORT','7860')), share=False)

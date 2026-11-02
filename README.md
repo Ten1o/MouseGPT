@@ -2,6 +2,8 @@
 
 **Vision-language models and natural-language tools for mouse behavior analysis**
 
+**Browser UI:** See the [UI user guide](ui/README.md) for clone-to-launch instructions, environment/API setup, stage inputs and outputs, and current implementation/validation status. Python 3.10+ is required to start the UI; Node.js/npm is not required.
+
 [![Paper — arXiv](https://img.shields.io/badge/arXiv-2503.10212-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2503.10212)
 [![GitHub — Code](https://img.shields.io/badge/GitHub-Code-181717?logo=github&logoColor=white)](https://github.com/Ten1o/MouseGPT)
 [![Hugging Face — Models](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-FFD21E)](https://huggingface.co/Ten1o/MouseGPT)

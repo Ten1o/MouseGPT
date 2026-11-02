@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MouseGPT</title><link rel="icon" href="data:,"><link rel="stylesheet" href="style.css"></head>
+<body>
+<section id="desktop-only" role="alert"><h1>Desktop computer required</h1><p>MouseGPT does not support mobile devices. Open this application on a desktop browser.</p></section>
+<aside class="sidebar" aria-label="Workflow sidebar" tabindex="0">
+ <a class="brand" href="#home">MouseGPT</a>
+ <div class="workspace-label">WORKFLOW</div>
+ <nav id="navigation" aria-label="Main navigation"></nav>
+ <div class="side-bottom"><div class="local-dot" id="service-state">Connecting…</div><button class="text-button" id="export">Export configuration</button><button class="text-button" id="reset">Reset draft</button></div>
+</aside>
+<div class="shell"><header><div id="breadcrumb">Overview</div></header><main id="main"><section class="panel" id="startup-status"><h1>MouseGPT</h1><p>Loading interface. If this message remains, reload the IDE preview with JavaScript enabled.</p></section></main></div>
+<div id="toast" role="status"></div>
+<dialog id="modal"><div id="modal-content"></div><form method="dialog"><button class="secondary">Close</button></form></dialog>
+<script src="workbench.js"></script>
+<script src="environment_page.js"></script>
+<script src="stage1_review.js"></script>
+<script src="stage4_preview.js"></script>
+<script src="task_views.js"></script>
+<script src="api_settings_files.js"></script>
+<script>startWorkbench();</script>
+</body></html>
