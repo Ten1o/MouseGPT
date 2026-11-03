@@ -1,6 +1,10 @@
 """Local configuration and sample validation, without model or UI dependencies."""
 import os
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import load_config
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
@@ -13,11 +17,34 @@ def configure_tracing():
     os.environ.setdefault("LANGSMITH_TRACING", os.environ["LANGCHAIN_TRACING_V2"])
 
 
-def get_api_key():
-    key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not key or key.startswith("YOUR_"):
-        raise RuntimeError("Set OPENAI_API_KEY in your environment before starting the NLUI.")
-    return key
+def azure_openai_enabled():
+    """Use Azure OpenAI when its resource endpoint is explicitly configured."""
+    return load_config("AGENT", require_key=False).provider == "azure_openai"
+
+
+def get_api_key(role="AGENT"):
+    try:
+        return load_config(role).api_key
+    except ValueError as error:
+        raise RuntimeError(str(error)) from error
+
+
+def azure_openai_config(deployment_variable, api_version_variable,
+                        default_api_version):
+    """Return validated Azure resource settings without reading or exposing its key."""
+    endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT", "").strip().rstrip("/")
+    if not endpoint:
+        raise RuntimeError("Set AZURE_OPENAI_ENDPOINT before using Azure OpenAI.")
+    deployment = os.environ.get(deployment_variable, "").strip()
+    if not deployment:
+        raise RuntimeError(f"Set {deployment_variable} before using Azure OpenAI.")
+    api_version = os.environ.get(
+        api_version_variable,
+        os.environ.get("AZURE_OPENAI_API_VERSION", default_api_version),
+    ).strip()
+    if not api_version:
+        raise RuntimeError("AZURE_OPENAI_API_VERSION must not be empty.")
+    return endpoint, deployment, api_version
 
 
 def image_files(config):

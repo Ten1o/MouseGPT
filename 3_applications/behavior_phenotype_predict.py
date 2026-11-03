@@ -5,6 +5,10 @@ import json
 from pathlib import Path
 import re
 import math
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import load_config, sdk_client
 
 
 def load_cohorts(path):
@@ -70,21 +74,21 @@ def main(args):
     instructions = build_instructions(context)
     output = Path(args.output)
     output.mkdir(parents=True, exist_ok=True)
-    from openai import OpenAI
-    client = OpenAI(max_retries=0, timeout=60)
+    config = load_config("PHENOTYPE", overrides={"model": args.model} if args.model else None)
+    client = sdk_client(config, max_retries=0, timeout=60)
     with csv.open("rb") as handle:
         uploaded = client.files.create(file=handle, purpose="user_data")
     provenance = {
         "data_csv": str(csv), "data_sha256": hashlib.sha256(csv.read_bytes()).hexdigest(),
         "context_report": str(context_path) if context_path else None,
         "context_sha256": hashlib.sha256(context_path.read_bytes()).hexdigest() if context_path else None,
-        "groups": groups, "model": args.model,
+        "groups": groups, "model": config.model,
     }
     (output / "inputs.json").write_text(json.dumps(provenance, indent=2) + "\n", encoding="utf-8")
     for session, label in groups["test_group"]:
         prompt = f"Knowledge group labels: {groups['knowledge_group']}\nPredict treatment for session {session} using the CSV. Show feature standardization, distances, and the predicted treatment and dose."
         response = request_prediction(
-            client, instructions, prompt, uploaded.id, model=args.model, timeout=args.max_wait,
+            client, instructions, prompt, uploaded.id, model=config.model, timeout=args.max_wait,
         )
         (output / f"{session}.txt").write_text(
             f"Test session: {session}\nHeld-out label (not supplied in the prediction prompt): {label}\n\n" + response.output_text, encoding="utf-8",
@@ -98,6 +102,6 @@ if __name__ == "__main__":
     parser.add_argument("--groups_json", required=True, help="Explicit knowledge/test session IDs and labels.")
     parser.add_argument("--context_report", help="Optional contextual narrative; no report is loaded by default.")
     parser.add_argument("--output", default="output/phenotype")
-    parser.add_argument("--model", default="gpt-4o")
+    parser.add_argument("--model", help="Optional model override from .env.local")
     parser.add_argument("--max_wait", type=float, default=600, help="Prediction HTTP request timeout in seconds")
     main(parser.parse_args())

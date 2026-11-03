@@ -76,7 +76,7 @@ def test_embedding_provider_failure_is_bounded(monkeypatch):
 
 def test_invalid_embedding_response_is_bounded(monkeypatch):
     response = Mock(status_code=200)
-    response.json.return_value = {"data": [{"embedding": [1, 2, 3]}]}
+    response.json.return_value = {"data": [{"embedding": [0, 0, 0]}]}
     post = Mock(return_value=response)
     monkeypatch.setattr(embedding.requests, "post", post)
     with pytest.raises(RuntimeError, match="after 2 attempts"):
@@ -232,6 +232,7 @@ def test_phenotype_failed_response_is_an_error():
 
 def test_coarse_pipeline_writes_aligned_hdf5_labels(tmp_path, monkeypatch):
     import openai
+    monkeypatch.setattr(coarse, "load_config", lambda *_args, **_kwargs: SimpleNamespace(provider="openai", api_key="test-key", endpoint="https://api.openai.com/v1"))
     group = "240419_C11M4"
     model = "example"
     folder = tmp_path / model
@@ -263,6 +264,7 @@ def test_coarse_pipeline_writes_aligned_hdf5_labels(tmp_path, monkeypatch):
 
 def test_phenotype_run_retains_instructions_and_holds_out_labels(tmp_path, monkeypatch):
     import openai
+    monkeypatch.setattr(phenotype, "load_config", lambda *_args, **_kwargs: SimpleNamespace(provider="openai", api_key="test-key", endpoint="https://api.openai.com/v1", model="test-model"))
     csv = tmp_path / "input.csv"
     csv.write_text("Group,walking_Ratio\ntrain,0.5\ntest,0.2\n")
     groups = tmp_path / "groups.json"

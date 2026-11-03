@@ -13,6 +13,11 @@ import numpy as np
 import pandas as pd
 import os
 import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import load_config, sdk_client
 from config import resolve_groups
 from llm_utils import request_json
 
@@ -223,12 +228,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    api_key = os.getenv('OPENAI_API_KEY')
-    if not api_key:
-        parser.error("Set OPENAI_API_KEY in your environment before running this script.")
-
-    from openai import OpenAI
-    client = OpenAI(api_key=api_key, max_retries=0, timeout=60)
+    client = sdk_client(load_config("ANALYSIS"), max_retries=0, timeout=60)
     
     
     main(args)

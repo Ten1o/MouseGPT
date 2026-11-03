@@ -38,7 +38,7 @@ def tool_classification(label: list) -> dict:
     print("label:", label)
     print(f'\033[0m')
     
-    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key()
+    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key("EMBEDDING")
 
     img_list = sorted(glob(os.path.join(img_folder, "*.jpg")))
 
@@ -69,7 +69,7 @@ def tool_cluster() -> dict:
     print("cluster")
     print(f'\033[0m')
     
-    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key()
+    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key("ANALYSIS")
 
     img_list = sorted(glob(os.path.join(img_folder, "*.jpg")))
 
@@ -100,7 +100,7 @@ def tool_behavior(frame_idx: int) -> dict:
     print("frame_idx:", frame_idx)
     print(f'\033[0m')
 
-    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key()
+    h5_file_path, img_folder = tool_config["file_path"], tool_config["img_folder"]
 
     # h5_file_path = tool_config["file_path"]
     frame_idx_str = str(frame_idx).zfill(8)
@@ -136,7 +136,7 @@ def tool_search(behavior_description: str) -> dict:
     print(f'\033[0m')
 
 
-    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key()
+    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key("EMBEDDING")
     img_list = sorted(glob(os.path.join(img_folder, "*.jpg")))
 
     sim_index, similarity = search_func(h5_file_path, behavior_description, api_key)
@@ -182,7 +182,7 @@ def tool_outlier() -> dict:
     print(f'\033[0m')
 
 
-    h5_file_path, img_folder, api_key = tool_config["file_path"], tool_config["img_folder"], get_api_key()
+    h5_file_path, img_folder = tool_config["file_path"], tool_config["img_folder"]
     img_list = sorted(glob(os.path.join(img_folder, "*.jpg")))
 
     outlier_index, outlier_degree = outlier_func(h5_file_path)

@@ -9,7 +9,7 @@ import random
 
 import numpy as np
 
-from tools_function.provider import post_json
+from tools_function.provider import post_chat_completion
 
 UNASSIGNED = -1
 UNASSIGNED_NAME = "Unassigned"
@@ -57,8 +57,7 @@ def parse_decision(result):
 
 def gpt_request(system_prompt, A_samples, B_samples, api):
     prompt = f"Samples from Cluster A: {A_samples}\nSamples from Cluster B: {B_samples}"
-    result = post_json(
-        "https://api.openai.com/v1/chat/completions",
+    result = post_chat_completion(
         api_key=api,
         payload={
             "model": "gpt-4o",

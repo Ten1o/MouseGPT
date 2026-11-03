@@ -1,5 +1,10 @@
 """Bounded requests and strict JSON parsing for behavior-analysis tools."""
 import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from mousegpt_config import load_config
 
 
 def parse_json_object(content):
@@ -17,7 +22,9 @@ def parse_json_object(content):
     return value
 
 
-def request_json(client, prompt, system_prompt, validator, *, max_attempts=3, model="gpt-4o"):
+def request_json(client, prompt, system_prompt, validator, *, max_attempts=3, model=None):
+    if model is None:
+        model = load_config("ANALYSIS", require_key=False).model
     if max_attempts < 1:
         raise ValueError("max_attempts must be positive.")
     error = None

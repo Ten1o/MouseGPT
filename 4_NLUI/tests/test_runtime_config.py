@@ -49,6 +49,27 @@ class RuntimeConfigurationTest(unittest.TestCase):
         with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
             self.assertEqual(config.get_api_key(), "test-key")
 
+    def test_azure_key_and_deployment_config_are_selected_by_endpoint(self):
+        environment = {
+            "AZURE_OPENAI_ENDPOINT": "https://example.openai.azure.com/",
+            "AZURE_OPENAI_API_KEY": "azure-key",
+            "AZURE_OPENAI_CHAT_DEPLOYMENT": "chat-deployment",
+            "AZURE_OPENAI_API_VERSION": "2024-12-01-preview",
+            "OPENAI_API_KEY": "official-key",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            self.assertTrue(config.azure_openai_enabled())
+            self.assertEqual(config.get_api_key(), "azure-key")
+            self.assertEqual(
+                config.azure_openai_config(
+                    "AZURE_OPENAI_CHAT_DEPLOYMENT",
+                    "AZURE_OPENAI_CHAT_API_VERSION",
+                    "2024-12-01-preview",
+                ),
+                ("https://example.openai.azure.com", "chat-deployment",
+                 "2024-12-01-preview"),
+            )
+
     def test_tracing_defaults_off_and_respects_explicit_opt_in(self):
         with patch.dict(os.environ, {}, clear=True):
             config.configure_tracing()

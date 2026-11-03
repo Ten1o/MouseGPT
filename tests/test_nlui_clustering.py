@@ -146,7 +146,7 @@ def test_malformed_provider_response_is_bounded_and_timed_out(monkeypatch):
 
 
 def test_authentication_failure_is_not_retried(monkeypatch):
-    post = Mock(return_value=Mock(status_code=401))
+    post = Mock(return_value=Mock(status_code=401, text='unauthorized'))
     monkeypatch.setattr(provider.requests, 'post', post)
     with pytest.raises(RuntimeError, match='HTTP 401'):
         clustering.gpt_request('prompt', ['a'], ['b'], 'not-a-real-key')
@@ -214,10 +214,14 @@ def test_similarity_tools_reject_invalid_stored_vectors_before_query(tmp_path, m
 
 def test_search_and_classification_return_matching_stored_ids(tmp_path, monkeypatch):
     from tools_function import search as searching, classification as classifying
+    from mousegpt_config import load_config
+    from mousegpt_embeddings import embedding_identity
     path = tmp_path / 'valid_vectors.h5'
     with pd.HDFStore(path, 'w') as store:
         store.put('features_des', pd.DataFrame([[1., 0.], [0., 1.]], index=[8, 16]))
         store.put('descriptions', pd.DataFrame({'id': [8, 16], 'description': ['a', 'b']}))
+        config = load_config('EMBEDDING', overrides={'api_key': 'key'})
+        store.get_storer('features_des').attrs.embedding_identity = json.dumps(embedding_identity(config, 2))
     monkeypatch.setattr(searching, 'encode_string_to_feature', Mock(return_value=[0., 1.]))
     ids, similarities = searching.search(path, 'walking', 'key')
     assert ids == ['00000016', '00000008']
@@ -245,7 +249,7 @@ def test_classification_tool_exports_quoted_labels_and_aggregates_duplicates(tmp
     function.decorator_list = []
     namespace = {
         'os': os, 'datetime': datetime, 'glob': glob,
-        'get_api_key': lambda: 'offline-key',
+        'get_api_key': Mock(return_value='offline-key'),
         'tool_config': {'file_path': 'not-opened.h5', 'img_folder': str(tmp_path), 'workspace': str(tmp_path / 'output')},
         'classification_func': Mock(return_value={'00000008': 0, '00000016': 1, '00000024': 2}),
         'export_cluster_labels': clustering.export_cluster_labels,
@@ -253,6 +257,7 @@ def test_classification_tool_exports_quoted_labels_and_aggregates_duplicates(tmp
     # Run the real tool body with its provider boundary mocked; LangChain is unnecessary.
     exec(compile(ast.Module(body=[function], type_ignores=[]), str(source), 'exec'), namespace)
     result = namespace['tool_classification'](['walking, slowly', 'resting "still"', 'resting "still"'])
+    namespace['get_api_key'].assert_called_once_with('EMBEDDING')
     with Path(result['save_path']).open(newline='') as handle:
         assert list(csv.reader(handle)) == [
             ['frame_id', 'behavior'], ['00000008', 'walking, slowly'],

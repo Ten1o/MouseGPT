@@ -1,0 +1,38 @@
+name: API workflow tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, feat/model-api-config]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GRADIO_ANALYTICS_ENABLED: "False"
+      LANGCHAIN_TRACING_V2: "false"
+      LANGSMITH_TRACING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-assets.txt
+            requirements-api.txt
+            requirements-dev.txt
+            4_NLUI/requirements.txt
+      - name: Install CPU dependencies
+        run: python -m pip install -r requirements-dev.txt -r 4_NLUI/requirements.txt
+      - name: Check dependency compatibility
+        run: python -m pip check
+      - name: Run offline regression and workflow tests
+        run: python -m pytest tests 4_NLUI/tests -q
