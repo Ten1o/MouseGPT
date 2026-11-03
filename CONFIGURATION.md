@@ -1,6 +1,6 @@
-# Model-service configuration contract
+# Model providers and configuration
 
-This document defines the configuration for Stages 2–4. The shared loader is
+Use the [researcher quick start](README.md#quick-start-use-a-hosted-vlm) for a first run or the [agent guide](README_AGENTS.md) for automated execution. This reference defines the configuration for Stages 2–4. The shared loader is
 implemented in `mousegpt_config.py`, and Stage 2/3/4 model requests now read
 it. Copy `.env.example` to `.env.local` at the repository root. For the
 default official OpenAI API, fill `MOUSEGPT_API_KEY`; the other fields already
@@ -12,15 +12,12 @@ remain fallbacks when no new value takes precedence.
 | Available input | Start here | Model-service role needed |
 | --- | --- | --- |
 | Synchronized videos, calibration, detector and pose weights | Stage 1, then prepare Stage 2 inputs | None for Stage 1 |
-| Paired camera images and matching velocity data | Stage 2 description generation | `VISION` |
+| JSONL prompts and images, including the small example | Stage 2 API client with `--backend api` | `VISION` |
+| Paired camera images and matching velocity data | Stage 2 paired-camera description generation | `VISION` |
 | Frame descriptions | Stage 3 embedding and HDF5 packaging | `EMBEDDING` |
 | Compatible HDF5 session and matching image previews | Stage 4 interface | `AGENT`; `EMBEDDING` for search/classification; `ANALYSIS` for model-assisted clustering |
 
-Prepared example sessions may start directly at Stage 4. A newly packaged
-session needs matching images to be shown there. Its clustering tool also
-needs the linkage table, which basic description/embedding packaging alone
-does not create. A user's own intermediate data can skip earlier stages if it
-passes the selected stage's input validation.
+Prepared example sessions may start directly at Stage 4. A newly packaged session needs matching images to be shown there. Use `3_applications/create_h5.py --with-linkage` to include the hierarchy needed by clustering. This option computes average linkage with cosine distance and requires quadratic memory, so start with a small session. Intermediate data may skip earlier stages when they satisfy the selected stage's validation.
 
 To inspect a session without processing it or making an API call, run
 `python scripts/check_workflow.py --input /path/to/session`. This suggests a
@@ -104,6 +101,8 @@ For an explicit, single-request API smoke test, run the following from the
 repository root after checking that the selected key is safe to use:
 
 ```bash
+python scripts/download_assets.py vlm-demo
+python scripts/download_assets.py vlm-demo --verify
 python scripts/smoke_model_api.py --role AGENT
 python scripts/smoke_model_api.py --role EMBEDDING
 python scripts/smoke_model_api.py --role VISION
@@ -111,11 +110,13 @@ python scripts/smoke_model_api.py --role VISION
 
 These commands are dry runs. Add `--live` to one command to send exactly one
 potentially billable request for that role. The vision check uses one small
-bundled JPEG by default; `--image PATH` selects another JPEG/PNG no larger than
+JPEG from the downloaded `vlm-demo` bundle by default; `--image PATH` selects another JPEG/PNG no larger than
 1 MB. This checks basic chat, vector length, or image acceptance, not the full
 Stage 2/3/4 pipeline or Agent tool calling. It never prints the configured key.
 
 ## Endpoint examples
+
+When using a configuration snippet below, edit existing entries and add only missing names in `.env.local`. Each setting must appear once; do not append a second model or API-key entry already present in the template.
 
 | Provider | `MOUSEGPT_ENDPOINT` example | Model field means |
 | --- | --- | --- |
@@ -138,8 +139,24 @@ tool calling, or Responses. Each selected workflow must check the capabilities
 it actually uses. A connection test may incur a small provider charge.
 
 For a built-in provider, change `MOUSEGPT_PROVIDER`, `MOUSEGPT_API_KEY`, and
-the model fields for the roles you use; leave `MOUSEGPT_ENDPOINT` unset. For
-example, one Claude-powered agent with an OpenAI embedding role can use:
+the model fields for the roles you use; leave `MOUSEGPT_ENDPOINT` unset.
+Alternatively, override only the role you want to replace. For example, a
+third-party VLM with the default OpenAI embedding service can use:
+
+```dotenv
+MOUSEGPT_PROVIDER=openai
+MOUSEGPT_API_KEY=YOUR_OPENAI_KEY
+MOUSEGPT_EMBEDDING_MODEL=text-embedding-3-large
+MOUSEGPT_VISION_PROVIDER=openai_compatible
+MOUSEGPT_VISION_ENDPOINT=https://YOUR_PROVIDER_BASE_URL/v1
+MOUSEGPT_VISION_API_KEY=YOUR_VISION_PROVIDER_KEY
+MOUSEGPT_VISION_MODEL=YOUR_IMAGE_CAPABLE_MODEL_ID
+```
+
+Run this configuration with `client_test.py --backend api` as shown in the
+[quick start](README.md#quick-start-use-a-hosted-vlm). Do not use the SWIFT
+backend for a generic hosted endpoint. For a Claude-powered conversational
+agent and OpenAI embeddings, the role overrides are:
 
 ```dotenv
 MOUSEGPT_PROVIDER=openai
@@ -162,14 +179,21 @@ Qwen/DashScope also has an OpenAI-compatible mode, but its recommended URL
 depends on region and workspace; select `openai_compatible` and enter the
 base URL for your own account. The same custom option covers other gateways.
 
-## Vector compatibility
+## Vector compatibility and model changes
 
-The present Stage 3 packager expects 3,072 finite values per description
-embedding. Stage 4 search/classification must use a query-embedding service
-compatible with the stored vectors. Equal vector length alone does not prove
-compatibility; the same embedding model/deployment and relevant settings
-should be used. A future integration should record the embedding identity in
-the session and reject or clearly flag mismatches.
+Stage 3 accepts embeddings of any consistent positive dimension. Each vector must be finite and nonzero. Its cache sidecar records the service, endpoint, model/deployment, API version, settings, dimension, description request hash, and vector hash. Session packaging checks those records and preserves the identity in the HDF5 `features_des` metadata.
+
+Stage 4 search and classification validate this identity against the current `EMBEDDING` role before making a query request. A different provider, endpoint, model, API version, or relevant setting requires regenerating embeddings and packaging the session again. Matching vector lengths do not make two embedding spaces compatible. Use stable model IDs and rebuild vectors if a provider changes the model behind a deployment alias; unchanged configuration text cannot detect that server-side change.
+
+Old vectors without verified metadata are not silently assigned the current model. The exact published `nlui-demo` HDF5 is recognized by its verified file hash and original official OpenAI `text-embedding-3-large` identity. Other legacy sessions must be regenerated from their descriptions. Copying a model name into metadata does not establish provenance.
+
+Changing the `VISION` model requires a new API-client output directory; unchanged completed records can resume. Paired-camera annotation caches and embedding caches validate their recorded inputs before reuse. Clustering caches include the selected analysis service and model, so changing `ANALYSIS` does not reuse another model's labels.
+
+## Request compatibility
+
+All provider presets use an OpenAI-compatible API surface; a preset is not a guarantee that every model offered by that service supports the selected role. Choose an image-capable model for VISION, an embedding model for EMBEDDING, and a tool-capable chat model for AGENT. Optional PHENOTYPE remains a separate OpenAI Responses workflow.
+
+Official OpenAI and Azure chat requests use `max_completion_tokens`; other compatible services use `max_tokens`. Sampling options are omitted where the selected request path requires that. Providers can expose additional model-specific constraints, and completion budgets may include reasoning tokens. Test the actual stage with a small input before scaling up. If a model rejects an option or cannot return the expected schema, inspect the failure and select a compatible configuration; do not repeatedly retry an unchanged rejected request.
 
 ## What the checks establish
 

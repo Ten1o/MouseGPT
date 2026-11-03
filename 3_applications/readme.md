@@ -6,24 +6,30 @@ Start with the prepared example session to explore existing descriptions, or gen
 
 | Workflow | Input | Output | External service |
 | --- | --- | --- | --- |
-| Description embedding | Per-frame descriptions | 3,072-dimensional vectors | OpenAI embeddings |
-| Session packaging | Descriptions and vectors | Aligned HDF5 tables | None |
+| Description embedding | Per-frame descriptions | Vectors with recorded model provenance | Configured `EMBEDDING` service |
+| Session packaging | Descriptions, vectors, and their provenance | Aligned HDF5 tables; optional clustering hierarchy | None |
 | Anomaly ranking | Session embeddings | Rows ranked by IsolationForest score | None |
-| Coarse behavior analysis | Embeddings and description keywords | Behavior categories and session counts | OpenAI |
-| Fine behavior analysis | Body-part descriptions and initial categories | Body-part labels and session counts | OpenAI |
+| Coarse behavior analysis | Embeddings and description keywords | Behavior categories and session counts | Configured `ANALYSIS` service |
+| Fine behavior analysis | Body-part descriptions and initial categories | Body-part labels and session counts | Configured `ANALYSIS` service |
 | Phenotype analysis | Cohort feature CSV and labeled reference sessions | Treatment predictions and calculation reports | OpenAI Responses API with Code Interpreter |
 
 ## Installation
 
-Create the stage-specific environment from the repository root:
+For description embedding and session packaging, use the root API environment from the [quick start](../README.md#quick-start-use-a-hosted-vlm). From the repository root:
 
 ```bash
+python -m pip install -r requirements-api.txt
 cd 3_applications
+```
+
+The remaining commands in this guide run from `3_applications/`. Full anomaly, UMAP, coarse/fine cohort, and report workflows need additional scientific packages. The historical `environment.yml` describes that analysis environment and includes Linux-specific builds:
+
+```bash
 conda env create -f environment.yml
 conda activate mgpt
 ```
 
-The environment file includes Linux system packages. On other platforms, adapt those packages to the target operating system. Run the commands below from `3_applications/`.
+Use a separate environment for those specialist workflows. On another platform, resolve compatible packages and verify the requested analysis before using it; the exported environment is not a portable installer. The hosted quick start does not require those cohort dependencies.
 
 API-backed workflows read the repository-root `.env.local` through the shared configuration loader. For the default official OpenAI API, copy `.env.example` there and fill `MOUSEGPT_API_KEY`; see [configuration](../CONFIGURATION.md) for optional role-specific services. They send selected descriptions or cohort data to the provider and may incur usage charges. Local anomaly ranking, session packaging, and dimensionality reduction do not require an API key.
 
@@ -56,14 +62,30 @@ Generate embeddings and package the session:
 
 ```bash
 python embedding_request.py --data_folder workspace/SESSION_ID
-python create_h5.py --workspace workspace --group_list SESSION_ID
+python create_h5.py --workspace workspace --group_list SESSION_ID --with-linkage
 ```
 
-The output is `workspace/SESSION_ID.h5`, containing `descriptions` and `features_des` tables. The embedding model is `text-embedding-3-large`; descriptive fields are combined into one text input per frame, excluding `Keywords`.
+The output is `workspace/SESSION_ID.h5`, containing `descriptions`, `features_des`, and (with `--with-linkage`) `linkage_matrix` tables. The model comes from the `EMBEDDING` configuration; the default is `text-embedding-3-large`. Descriptive fields are combined into one text input per frame, excluding `Keywords`.
 
-Supported inputs include JSON description objects, JSON chat-completion responses, and TXT files containing plain text or JSON descriptions. Each filename stem is the frame ID, and each embedding is saved as `FRAME_ID_des.csv`. IDs must be unique and match across descriptions and embeddings. The exporter requires 3,072 finite values per vector and validates the complete session before replacing an existing HDF5 file. For structured analysis, retain the Stage 2 fields: coarse clustering uses `Keywords`, and fine analysis uses the selected body-part field.
+Supported inputs include JSON description objects, JSON chat-completion responses, and TXT files containing plain text or JSON descriptions. Each filename stem is the frame ID, and each embedding is saved as `FRAME_ID_des.csv`. IDs must be unique and match across descriptions and embeddings. Vectors may have any consistent positive dimension and must be finite and nonzero. The exporter validates the complete session, including each vector's provenance sidecar, before atomically replacing an existing HDF5 file. Keep a separate workspace when you need to retain an earlier session. For structured analysis, retain the Stage 2 fields: coarse clustering uses `Keywords`, and fine analysis uses the selected body-part field.
 
-Embedding requests use three attempts per file and eight concurrent workers by default. Adjust `--max_attempts`, `--max_workers`, and `--timeout` for your workload. Matching cached embeddings are reused; changing the description, embedding model, or vector file triggers regeneration. A failed file makes the command exit with an error.
+The script writes provenance under `feature/.embedding-cache/`, recording the configured service/model, settings, input hash, and vector hash. Keep these files with the CSV vectors. Packaging verifies that all vectors come from the same configuration and still match their descriptions; it stores the identity in the HDF5 metadata. CSVs without valid metadata must be regenerated rather than assigned an assumed model name.
+
+`--with-linkage` builds average linkage over cosine distances in the stored embedding space. It preserves the exact feature-row order and creates an empty four-column linkage table for a one-frame session. Distance computation uses quadratic memory, so begin with a small session and assess memory requirements before using it on a long recording. Omit this option when only search/classification is needed. This per-session hierarchy is distinct from the UMAP/cohort analysis described below.
+
+Embedding requests use three attempts per file and eight concurrent workers by default. Adjust `--max_attempts`, `--max_workers`, and `--timeout` for your workload. Matching cached embeddings are reused; changing the description, embedding model, or vector file triggers regeneration. A failed file makes the command exit with an error. For a first run, use `--max_workers 1`.
+
+From the repository root, validate and search the packaged session with:
+
+```bash
+python scripts/query_session.py \
+  --session 3_applications/workspace/SESSION_ID.h5 --validate-only
+python scripts/query_session.py \
+  --session 3_applications/workspace/SESSION_ID.h5 --query "mouse walking" \
+  --output 3_applications/workspace/search.csv
+```
+
+Search and classification check stored embedding identity against the current `EMBEDDING` role before requesting query vectors. Changing models or services requires regenerating and repackaging the session. For legacy HDF5 files without provenance, regenerate from the source descriptions; only the exact published prepared-session file is recognized as its documented original configuration. Use stable model IDs: metadata cannot detect a provider silently changing the model behind an unchanged deployment alias.
 
 ## Configure sessions and groups
 

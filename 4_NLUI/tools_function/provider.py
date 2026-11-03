@@ -7,7 +7,7 @@ import sys
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from mousegpt_config import http_request_config, load_config
+from mousegpt_config import chat_request_options, http_request_config, load_config
 
 
 def post_json(url, *, api_key, payload, validate, headers=None,
@@ -42,29 +42,26 @@ def post_json(url, *, api_key, payload, validate, headers=None,
             time.sleep(min(2 ** attempt, 8))
 
 
-def post_chat_completion(payload, *, api_key, validate, **request_options):
-    """Call either OpenAI or the configured Azure chat deployment."""
-    config = load_config("ANALYSIS", overrides={"api_key": api_key} if api_key else None)
+def post_chat_completion(payload, *, api_key=None, validate, config=None, **request_options):
+    """Call the configured analysis service with its own role credentials."""
+    config = config or load_config("ANALYSIS", overrides={"api_key": api_key} if api_key else None)
+    if config.role != "ANALYSIS":
+        raise ValueError("Analysis requests require an ANALYSIS configuration.")
     url, headers = http_request_config(config, "chat/completions")
     request_payload = dict(payload)
+    token_budget = request_payload.pop("max_completion_tokens", request_payload.pop("max_tokens", 2000))
+    controls = {name: request_payload.pop(name, None) for name in ("temperature", "seed", "top_p")}
+    request_payload.update(chat_request_options(config, max_tokens=token_budget, **controls))
     if config.provider == "azure_openai":
         request_payload.pop("model", None)
-        if "max_tokens" in request_payload:
-            request_payload["max_completion_tokens"] = request_payload.pop("max_tokens")
-        # The configured Azure reasoning deployment may reject sampling controls.
-        request_payload.pop("temperature", None)
-        request_payload.pop("top_p", None)
     else:
         request_payload["model"] = config.model
-        if config.provider != "openai":
-            request_payload.pop("temperature", None)
-            request_payload.pop("top_p", None)
     return post_json(
         url, api_key=api_key, payload=request_payload, validate=validate,
         headers=headers, **request_options)
 
 
-def encode_string_to_feature(behavior_description, api_key):
+def encode_string_to_feature(behavior_description, api_key=None, *, config=None):
     """Obtain a finite, nonzero embedding or raise an explicit provider error."""
     def validate(result):
         values = result["data"][0]["embedding"]
@@ -74,7 +71,9 @@ def encode_string_to_feature(behavior_description, api_key):
         ) or not any(values):
             raise ValueError("The provider did not return a finite, nonzero embedding.")
 
-    config = load_config("EMBEDDING", overrides={"api_key": api_key} if api_key else None)
+    config = config or load_config("EMBEDDING", overrides={"api_key": api_key} if api_key else None)
+    if config.role != "EMBEDDING":
+        raise ValueError("Embedding requests require an EMBEDDING configuration.")
     url, headers = http_request_config(config, "embeddings")
     payload = {"input": behavior_description}
     if config.provider != "azure_openai":

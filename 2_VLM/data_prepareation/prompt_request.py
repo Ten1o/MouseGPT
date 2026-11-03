@@ -16,7 +16,7 @@ import requests
 from tqdm import tqdm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from mousegpt_config import http_request_config, load_config
+from mousegpt_config import chat_request_options, http_request_config, load_config
 
 
 DESCRIPTION_FIELDS = ("Overall", "Head", "Limb", "Torso", "Others", "Keywords")
@@ -64,6 +64,8 @@ def parse_description(response):
     for field in DESCRIPTION_FIELDS:
         if not isinstance(description.get(field), str) or not description[field].strip():
             raise ValueError(f"Description requires a nonempty text field: {field}")
+    if set(description) != set(DESCRIPTION_FIELDS):
+        raise ValueError("Description must contain exactly the six documented fields.")
     return description
 
 
@@ -127,20 +129,20 @@ def resolve_api(api_key, model):
     return url, headers, identity
 
 
-def request_description(payload, url, headers=None, max_attempts=3):
+def request_description(payload, url, headers=None, max_attempts=3, timeout=120):
     """Retry only transient transport/server errors within a fixed attempt limit."""
     if headers is None:
         # Preserve the earlier direct-call form: request_description(payload, api_key).
         url, headers, _ = resolve_api(url, payload.get("model"))
-    if max_attempts < 1:
-        raise ValueError("max_attempts must be at least 1")
+    if max_attempts < 1 or not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("max_attempts must be at least 1 and timeout must be finite and positive")
     for attempt in range(max_attempts):
         try:
             response = requests.post(
                 url,
                 headers=headers,
                 json=payload,
-                timeout=(10, 120),
+                timeout=(10, timeout),
             )
         except (requests.Timeout, requests.ConnectionError):
             if attempt + 1 == max_attempts:
@@ -148,7 +150,7 @@ def request_description(payload, url, headers=None, max_attempts=3):
         else:
             if response.status_code == 200:
                 return response.json()
-            transient = response.status_code == 429 or 500 <= response.status_code < 600
+            transient = response.status_code in (408, 429) or 500 <= response.status_code < 600
             if not transient or attempt + 1 == max_attempts:
                 detail = response.text[:1000] if isinstance(response.text, str) else ""
                 raise RuntimeError(
@@ -190,20 +192,11 @@ def process_images(file1, file2, data_folder, velocity_list, api_key=None, max_a
         "model": model,
         "messages": [{"role": "system", "content": build_system_prompt()},
                      {"role": "user", "content": content}],
-        "seed": 1, "temperature": 0, "max_tokens": 2000,
+        **chat_request_options(config, max_tokens=2000, temperature=0, seed=1),
     }
     url, headers, api_identity = resolve_api(api_key, model)
-    if api_identity["provider"] == "azure_openai":
-        # Current Azure reasoning/chat deployments use max_completion_tokens.
-        payload["max_completion_tokens"] = payload.pop("max_tokens")
-        # The supplied Azure deployment sample does not advertise these options.
-        payload.pop("seed", None)
-        payload.pop("temperature", None)
-    elif api_identity["provider"] != "openai":
-        # Sampling controls vary across compatible providers (Claude, for
-        # example, may reject temperature=0). Let the model use its defaults.
-        payload.pop("seed", None)
-        payload.pop("temperature", None)
+    if config.provider == "azure_openai":
+        payload.pop("model")
     log_path = root / "log" / output_basename
     request_hash = json_digest({"api": api_identity, "payload": payload})
     if raw_path.exists() and log_path.exists():

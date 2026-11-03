@@ -31,3 +31,4 @@ __pycache__/
 # Generated OpenMMLab packaging mirrors
 .mim/
 /outputs/
+/runs/

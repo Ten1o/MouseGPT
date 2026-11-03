@@ -1,6 +1,7 @@
 """The explicit live switch limits model-service smoke tests to one request."""
 import importlib.util
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import Mock, patch
 
@@ -25,7 +26,10 @@ class SmokeModelApiTest(unittest.TestCase):
         post.assert_not_called()
 
     def test_vision_has_one_image_and_small_completion_budget(self):
-        operation, body = smoke.request_body(self.config("VISION"))
+        with tempfile.TemporaryDirectory() as directory:
+            image = Path(directory) / "fixture.jpg"
+            image.write_bytes(b"offline image fixture")
+            operation, body = smoke.request_body(self.config("VISION"), image)
         self.assertEqual(operation, "chat/completions")
         self.assertEqual(body["max_completion_tokens"], 256)
         self.assertEqual(len(body["messages"]), 1)
@@ -33,7 +37,7 @@ class SmokeModelApiTest(unittest.TestCase):
 
     def test_live_embedding_sends_exactly_one_request(self):
         response = Mock(ok=True, status_code=200)
-        response.json.return_value = {"data": [{"embedding": [0.0] * 3072}]}
+        response.json.return_value = {"data": [{"embedding": [1.0, 0.0, 0.0]}]}
         with patch.object(smoke, "load_config", return_value=self.config("EMBEDDING")), patch(
                 "requests.post", return_value=response) as post:
             self.assertEqual(smoke.run("EMBEDDING", live=True), 0)
@@ -47,6 +51,22 @@ class SmokeModelApiTest(unittest.TestCase):
         self.assertEqual(operation, "chat/completions")
         self.assertEqual(body["max_tokens"], 256)
         self.assertNotIn("max_completion_tokens", body)
+
+    def test_official_reasoning_model_uses_completion_budget(self):
+        config = ProviderConfig("AGENT", "openai", "https://api.openai.com/v1",
+                                "o3", None, "fake-key")
+        _, body = smoke.request_body(config)
+        self.assertEqual(body["max_completion_tokens"], 256)
+        self.assertNotIn("max_tokens", body)
+
+    def test_live_embedding_rejects_zero_or_nonfinite_vectors(self):
+        for values in ([0.0, 0.0], [float("nan")], [True], [], ["1.0"]):
+            with self.subTest(values=values):
+                response = Mock(ok=True, status_code=200)
+                response.json.return_value = {"data": [{"embedding": values}]}
+                with patch.object(smoke, "load_config", return_value=self.config("EMBEDDING")), patch(
+                        "requests.post", return_value=response):
+                    self.assertEqual(smoke.run("EMBEDDING", live=True), 1)
 
 
 if __name__ == "__main__":

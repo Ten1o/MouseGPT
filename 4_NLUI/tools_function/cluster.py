@@ -3,13 +3,15 @@ import json
 from scipy.cluster.hierarchy import ClusterNode, to_tree
 from tools_function.cluster_utils import CLUSTER_CACHE_VERSION, bfs_traverse_print, save_des_labels
 from runtime_config import get_api_key, validate_frame_ids
+from mousegpt_config import chat_request_options, load_config
 import os
+import tempfile
 
 
 
 
 
-def cluster(h5_file_path, img_folder, api_key):
+def cluster(h5_file_path, img_folder, api_key=None):
 
 
 
@@ -40,7 +42,18 @@ def cluster(h5_file_path, img_folder, api_key):
         from pathlib import Path
         import hashlib
         source = Path(h5_file_path).resolve()
-        identity = f'{CLUSTER_CACHE_VERSION}:{source}:{source.stat().st_size}:{source.stat().st_mtime_ns}:{Path(img_folder).resolve()}:{system_prompt}'
+        config = load_config("ANALYSIS", overrides={"api_key": api_key} if api_key else None)
+        api_key = config.api_key
+        identity = json.dumps({
+            "version": CLUSTER_CACHE_VERSION,
+            "source": str(source), "size": source.stat().st_size,
+            "mtime_ns": source.stat().st_mtime_ns,
+            "images": str(Path(img_folder).resolve()), "prompt": system_prompt,
+            "api": {"provider": config.provider, "endpoint": config.endpoint,
+                    "model": config.model, "api_version": config.api_version},
+            "request_options": chat_request_options(config, max_tokens=2000,
+                                                     temperature=0.3, top_p=0.5),
+        }, sort_keys=True)
         cache_key = hashlib.sha256(identity.encode()).hexdigest()[:16]
         cache_dir = Path(__file__).resolve().parents[1] / 'workspace' / 'cluster_cache'
         cache_dir.mkdir(parents=True, exist_ok=True)
@@ -51,12 +64,19 @@ def cluster(h5_file_path, img_folder, api_key):
         else:
             gpt_cluster_result = bfs_traverse_print(root, system_prompt, api_key, description_content_list, img_paths_list, max_sample_num=50)
             save_des_labels(gpt_cluster_result, len(description_content_list))
-            with open(gpt_cluster_result_path, 'w') as json_file:
-                json.dump(gpt_cluster_result, json_file, indent=4)
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile("w", dir=cache_dir, delete=False) as json_file:
+                    temporary = Path(json_file.name)
+                    json.dump(gpt_cluster_result, json_file, indent=4)
+                os.replace(temporary, gpt_cluster_result_path)
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
         labels_des, behaviors = save_des_labels(gpt_cluster_result, len(description_content_list))
         return labels_des, behaviors
 
 
 if __name__ == '__main__':
     print(cluster(
-        'data/240419_C11M4.h5', 'data/240419_C11M4_imgs', get_api_key()))
+        'data/240419_C11M4.h5', 'data/240419_C11M4_imgs', get_api_key("ANALYSIS")))
