@@ -1,0 +1,2 @@
+# Apple Silicon uses the shared Python 3.12 Agent requirements.
+-r agent.in

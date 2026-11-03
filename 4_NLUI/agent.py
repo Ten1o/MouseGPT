@@ -239,4 +239,4 @@ if __name__ == "__main__":
     if args.check:
         print("Interface ready: configuration, session and components validated. Provider access was not tested.")
     else:
-        demo.launch(server_name="127.0.0.1", server_port=7860, share=False)
+        demo.launch(server_name="127.0.0.1", server_port=int(os.environ.get("MOUSEGPT_NLUI_PORT", "7860")), share=False)

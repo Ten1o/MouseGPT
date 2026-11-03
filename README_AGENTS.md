@@ -150,6 +150,16 @@ The UI is at `http://127.0.0.1:7860`. Select a session and exercise the requeste
 
 The interface includes a local Python execution tool. Keep it in a trusted local session. Tracing is off by default; enable it only when the user's workflow calls for it.
 
+## Route C: browser workbench
+
+The [UI guide](ui/README.md) covers `python ui/server.py --port 8878`. Run it from a checkout containing `ui/`; processing uses validated, explicitly selected environments on the backend machine. API settings are saved separately in the application's configuration directory. Preserve those settings and the user's source files. A stale environment validation must be refreshed before processing; do not manufacture a validation report or bypass the activation check.
+
+The UI uses the same embedding generation, provenance-aware packaging and retrieval contracts as Route A. Packaging can read separate description/vector directories and writes a new HDF5 path. Enable **Clustering hierarchy** only when required, with the same quadratic-memory limitation as `--with-linkage`. Changing embedding models requires rebuilding vectors and the session.
+
+Visual-review records belong to their canonical source directory and original frame ID, with a checksum of the source description. Load frames again after source changes. Save creates a new review snapshot; only that source session's reviewed frames are included, regardless of Passed/Needs correction status. Regenerate embeddings from the returned snapshot directory before packaging. Do not combine unscoped legacy drafts or reviews from another session.
+
+For MMPose conversion, require consecutive integer frame IDs from zero and explicit `source_keypoints` in the mapping. Pose estimation needs an empty destination. Cancel terminates the worker and its children; inspect completed/partial outputs before retrying into a fresh destination. Inline Q&A uses retrieval; **Open tool-calling Agent** starts the separate repository Agent on port 7861.
+
 ## Input and output contracts
 
 | Route | Required inputs | Acceptance criteria |
@@ -186,6 +196,8 @@ python -m pytest tests 4_NLUI/tests -q
 python -m mousegpt_config --config .env.example --allow-missing-key --ignore-environment
 git diff --check
 ```
+
+For workbench changes, install `ui/requirements-test.txt` and also run `python -m pytest ui 1_keypoints/tests/test_batch_vis_ui.py 1_keypoints/tests/test_convert_sleap.py 1_keypoints/tests/test_reprojection_ui.py -q` and `node --test ui/tests/review_state.test.cjs` (Node.js 22). These checks use temporary data and simulated provider responses. See the CI workflow for the complete platform matrix.
 
 The test suite uses controlled provider responses and does not require production keys or downloaded examples. Report skipped tests and their reasons. Use representative regression tests for changes to provider routing, credential isolation, vector provenance, caching, frame alignment, and pipeline outputs. Do not claim live provider coverage based on mocked tests.
 

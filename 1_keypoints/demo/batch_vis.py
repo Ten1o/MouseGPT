@@ -1,13 +1,13 @@
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.animation import FuncAnimation
-import numpy as np
-import scipy
-import os
-from tqdm import tqdm
-from functools import partial
-from glob import glob
+"""Filter reconstructed NPY keypoints and render their 3D skeleton animation.
 
+This script consumes triangulation output; it does not run triangulation.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import math
+import numpy as np
 from scipy.signal import savgol_filter
 
 
@@ -65,117 +65,131 @@ bones = [[ 1,  2],
         [ 7, 21],
         [ 7, 24]]
 
-def find_files(directory, file_name):
-
-    file_paths = []
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-
-            if file == file_name:
-
-                file_path = os.path.join(root, file)
-                file_paths.append(file_path)
-    return file_paths
-
-
-
-def update(frame, pbar):
-    ax.clear()
-    points = data_3d[frame]
-    frame += 1
-    ax.scatter(points[:,0], points[:,1], points[:,2], c='r', marker='o')
-
-    for bone, color in zip(bones, colors):
-        x = [points[bone[0]-1][0], points[bone[1]-1][0]]
-        y = [points[bone[0]-1][1], points[bone[1]-1][1]]
-        z = [points[bone[0]-1][2], points[bone[1]-1][2]]
-        ax.plot(x, y, z, c='b')
-
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    ax.set_xlim([xmin, xmax])
-    ax.set_ylim([ymin, ymax])
-    ax.set_zlim([zmin, zmax])
-
-    ax.set_title(f'Frame {frame}')
-
-    pbar.update(1)
-
-def read_pred_3dpts(pred_mat_path):
-    mat_data = scipy.io.loadmat(pred_mat_path)
-    mocap = mat_data['mocap']
-    data_3d = []
-
-    for joint in mocap[0, 0]:
-        data_3d.append(joint)
-    data_3d = np.array(data_3d)
-    data_3d = np.transpose(data_3d, [1, 0, 2])
-
-    print("Shape of data_3d", data_3d.shape)
-
-    return data_3d
 
 def filter(data_3d):
-    # Apply the Savitzky-Golay filter to the 3D keypoint data
-    window_length = 15
-    poly_order = 5
-
-    # Ensure window length is odd
-    if window_length % 2 == 0:
-        window_length += 1
-
-    filtered_data_3d = np.empty_like(data_3d)
-
-    # Apply the filter for each dimension separately
-    for dim in range(3):
-        for point in range(data_3d.shape[1]):
-            filtered_data_3d[:, point, dim] = savgol_filter(data_3d[:, point, dim], window_length, poly_order)
-    return filtered_data_3d
+    """The original batch_vis Savitzky-Golay settings: window 15, order 5."""
+    return savgol_filter(data_3d,15,5,axis=0)
 
 
-for date in tqdm(sorted(glob(os.environ['MOUSEGPT_DATE_GLOB']))):
-    for group in sorted(glob(f'{date}/*')):
-        print(group)
-        npy_path = f'{group}/tri_new.npy'
-        if os.path.exists(npy_path):
-
-            print(npy_path)
-            data_3d = np.load(npy_path)
-
-            frame_num = data_3d.shape[0]
-            if data_3d.shape[-1] == 3:
-                data_3d = data_3d.reshape(frame_num,24,3)
-            else:
-                data_3d = data_3d[:, : , :, :3].reshape(frame_num,24,3)
-
-            valid_indices = np.isfinite(data_3d[:, :, 0]) & np.isfinite(data_3d[:, :, 1]) & np.isfinite(data_3d[:, :, 2])
-
-            data_3d = filter(data_3d)
-            np.save(npy_path.replace('new', 'filter'), data_3d)
+def prepare_coordinates(source,unit):
+    a=np.load(source,allow_pickle=False)
+    if a.ndim!=3 or a.shape[1:]!=(24,3) or len(a)<15:
+        raise ValueError('Expected at least 15 frames with shape (frames, 24, 3).')
+    units={'m':1.,'cm':.01,'mm':.001}
+    if unit not in units:raise ValueError('Select the source spatial unit: m, cm or mm.')
+    missing=~np.isfinite(a).all(axis=2)|(a==0).all(axis=2)
+    a=a.astype(float)
+    for point in range(24):
+        good=np.flatnonzero(~missing[:,point])
+        if len(good)<2 or good[0]!=0 or good[-1]!=len(a)-1:
+            raise ValueError(f'Keypoint {point}: missing endpoint or insufficient observations. Correct the source before filtering.')
+        for dim in range(3):a[:,point,dim]=np.interp(np.arange(len(a)),good,a[good,point,dim])
+    return filter(a)*units[unit],int(missing.sum())
 
 
-            filtered_data_3d = data_3d[valid_indices]
+def render_animation(data,target,start,end,fps):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation,FFMpegWriter
+    from video_utils import ffmpeg_executable
+    fig=plt.figure(figsize=(6.4,4.8));ax=fig.add_subplot(111,projection='3d')
+    try:
+        points=data[start:end].reshape(-1,3)
+        low=points.min(axis=0);high=points.max(axis=0);span=np.maximum(high-low,.01)
+        for dim,setter in enumerate((ax.set_xlim,ax.set_ylim,ax.set_zlim)):setter(low[dim]-span[dim]*.1,high[dim]+span[dim]*.1)
+        ax.set_xlabel('X (m)');ax.set_ylabel('Y (m)');ax.set_zlabel('Z (m)')
+        ax.set_box_aspect(span)
+        scatter,=ax.plot([],[],[],'ro',markersize=3)
+        lines=[ax.plot([],[],[],color='b',linewidth=1.5)[0] for _ in bones]
+        title=ax.set_title('')
+        def update(index):
+            frame=data[index];scatter.set_data_3d(frame[:,0],frame[:,1],frame[:,2])
+            for line,(a,b) in zip(lines,bones):
+                segment=frame[[a-1,b-1]];line.set_data_3d(segment[:,0],segment[:,1],segment[:,2])
+            title.set_text(f'Frame {index}')
+            if (index-start)%30==0:print(f'3D animation: {index-start+1}/{end-start}',flush=True)
+            return [scatter,*lines,title]
+        animation=FuncAnimation(fig,update,frames=range(start,end),interval=1000/fps,cache_frame_data=False)
+        with matplotlib.rc_context({'animation.ffmpeg_path':ffmpeg_executable()}):
+            writer=FFMpegWriter(fps=fps,codec='libx264',extra_args=['-preset','veryfast','-crf','23','-pix_fmt','yuv420p','-movflags','+faststart'])
+            animation.save(str(target),writer=writer,dpi=100)
+    finally:plt.close(fig)
 
-            xmin, xmax = np.min(filtered_data_3d[:, 0]), np.max(filtered_data_3d[:, 0])
-            ymin, ymax = np.min(filtered_data_3d[:, 1]), np.max(filtered_data_3d[:, 1])
-            zmin, zmax = np.min(filtered_data_3d[:, 2]), np.max(filtered_data_3d[:, 2])
-            print(xmin, xmax, ymin, ymax)
 
-            xmin, xmax, ymin, ymax, zmin, zmax = -0.02, 0.28, -0.02, 0.28, -0.02, 0.19
+def playback_fps(source,reference_video=None,fps=None):
+    if fps is not None:
+        if not math.isfinite(fps) or fps<=0:raise ValueError('Playback FPS must be positive.')
+        return float(fps)
+    source=Path(source)
+    reference=Path(reference_video).expanduser() if reference_video else source.parent.parent/'videos/data1.mp4'
+    if reference_video and not reference.is_file():raise ValueError(f'Reference video not found: {reference}')
+    if reference.is_file():
+        import cv2
+        cap=cv2.VideoCapture(str(reference))
+        try:
+            value=cap.get(cv2.CAP_PROP_FPS)
+            if not cap.isOpened() or not math.isfinite(value) or value<=0:raise ValueError(f'Cannot read FPS from {reference}')
+            return float(value)
+        finally:cap.release()
+    return 60.
 
 
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
+def process_file(source,output_dir=None,unit='m',start=0,frames=0,fps=None,reference_video=None):
+    source=Path(source).expanduser().resolve()
+    if not source.is_file():raise ValueError(f'NPY file not found: {source}')
+    dest=Path(output_dir).expanduser().resolve() if output_dir else source.parent
+    dest.mkdir(parents=True,exist_ok=True)
+    npy=dest/'tri_filter.npy';video=dest/'tri_filter.mp4'
+    for target in (npy,video):
+        if target.exists():raise ValueError(f'Output already exists; choose a new output directory: {target}')
+    data,filled=prepare_coordinates(source,unit)
+    if not 0<=start<len(data) or frames<0:raise ValueError('Start frame must be in range; preview frames must be >= 0 (0 = all).')
+    fps=playback_fps(source,reference_video,fps)
+    end=min(len(data),start+frames) if frames else len(data)
+    print(f'Filtered {len(data)} frames, filled {filled} keypoints; converted {unit} to metres.',flush=True)
+    # Write directly in the selected directory. Some SMB shares restrict writes
+    # inside newly created hidden/dot-prefixed directories.
+    created=[]
+    try:
+        with npy.open('xb') as handle:
+            created.append(npy)
+            np.save(handle,data)
+        # Reserve the video name without overwriting an existing result. FFmpeg
+        # writes into this file; no temporary output subdirectory is used.
+        with video.open('xb'):created.append(video)
+        render_animation(data,video,start,end,fps)
+    except BaseException as exc:
+        for target in reversed(created):
+            try:target.unlink(missing_ok=True)
+            except OSError as cleanup:print(f'Cannot remove incomplete output {target}: {cleanup}',flush=True)
+        if isinstance(exc,PermissionError):
+            raise PermissionError(f'Cannot write output files in {dest}. Check file creation/write permissions on this directory. No temporary subdirectory is used.') from exc
+        raise
+    return {'files':[str(npy),str(video)],'frames':len(data),'filled_points':filled,'unit':'m','viewer':'3d-video',
+            'videos':[{'index':1}],'preview_start':start,'preview_frames':end-start,'fps':fps,
+            'filter':{'window':15,'polynomial_order':5},'scripts':['1_keypoints/demo/batch_vis.py']}
 
-            with tqdm(total=frame_num, desc="Processing", unit="frame") as pbar:
 
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--input',type=Path,help='Existing triangulated coordinates, usually tri_new.npy.')
+    parser.add_argument('--output-dir',type=Path,help='Default: beside the input NPY.')
+    parser.add_argument('--unit',choices=['m','cm','mm'],default='m',help='Input spatial unit; output is metres.')
+    parser.add_argument('--start',type=int,default=0)
+    parser.add_argument('--frames',type=int,default=0,help='Animation length; default 0 = all frames.')
+    parser.add_argument('--fps',type=float,default=None,help='Override playback FPS. Default: original video FPS, otherwise 60.')
+    parser.add_argument('--reference-video',type=Path,help='Original video used to read playback FPS.')
+    parser.add_argument('--result',type=Path,help='Optional result manifest JSON for callers.')
+    args=parser.parse_args()
+    if args.input:
+        result=process_file(args.input,args.output_dir,args.unit,args.start,args.frames,args.fps,args.reference_video)
+    else:
+        from glob import glob
+        pattern=os.environ.get('MOUSEGPT_DATE_GLOB')
+        if not pattern:parser.error('Provide --input (tri_new.npy) or MOUSEGPT_DATE_GLOB for batch processing.')
+        sources=[Path(group)/'tri_new.npy' for date in sorted(glob(pattern)) for group in sorted(glob(str(Path(date)/'*')))]
+        result={'sessions':[process_file(source,None,args.unit,args.start,args.frames,args.fps,args.reference_video) for source in sources if source.is_file()]}
+    if args.result:args.result.write_text(json.dumps(result,indent=2),encoding='utf-8')
 
-                ani = FuncAnimation(fig, partial(update, pbar=pbar), frames=frame_num, interval=1000/60)
-
-
-                ani.save(f'tri_filter.mp4', writer='ffmpeg')
-
-                plt.show()
-
+if __name__=='__main__':main()

@@ -1,0 +1,4 @@
+# CPU workflow, browser workbench and video regression checks.
+-r ../requirements-dev.txt
+-r ../4_NLUI/requirements.txt
+-r environments/core.in

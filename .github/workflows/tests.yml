@@ -1,9 +1,9 @@
-name: API workflow tests
+name: MouseGPT workflow tests
 
 on:
   pull_request:
   push:
-    branches: [main, feat/model-api-config]
+    branches: [main, feat/model-api-config, feat/ui-workbench]
 
 permissions:
   contents: read
@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
       GRADIO_ANALYTICS_ENABLED: "False"
@@ -30,9 +30,23 @@ jobs:
             requirements-api.txt
             requirements-dev.txt
             4_NLUI/requirements.txt
+            ui/requirements-test.txt
+            ui/environments/core.in
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Install CPU dependencies
-        run: python -m pip install -r requirements-dev.txt -r 4_NLUI/requirements.txt
+        run: python -m pip install -r ui/requirements-test.txt
       - name: Check dependency compatibility
         run: python -m pip check
       - name: Run offline regression and workflow tests
-        run: python -m pytest tests 4_NLUI/tests -q
+        env:
+          MOUSEGPT_UI_HOME: ${{ runner.temp }}/mousegpt-ui-tests
+          MPLCONFIGDIR: ${{ runner.temp }}/mousegpt-matplotlib
+        run: >-
+          python -m pytest -c pytest.ini tests 4_NLUI/tests ui
+          1_keypoints/tests/test_batch_vis_ui.py
+          1_keypoints/tests/test_convert_sleap.py
+          1_keypoints/tests/test_reprojection_ui.py -q
+      - name: Check browser review isolation
+        run: node --test ui/tests/review_state.test.cjs

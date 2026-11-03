@@ -1,5 +1,6 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
+import inspect
 import warnings
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
@@ -32,6 +33,17 @@ PredType = Union[InstanceData, InstanceList]
 ImgType = Union[np.ndarray, Sequence[np.ndarray]]
 ConfigType = Union[Config, ConfigDict]
 ResType = Union[Dict, List[Dict], InstanceData, List[InstanceData]]
+
+
+def _detector_datasample_keyword(detector):
+    """MMDetection releases use singular or plural for this output switch."""
+    supported=set(inspect.signature(detector.__call__).parameters)
+    supported.update(getattr(detector, 'postprocess_kwargs', set()))
+    if 'return_datasamples' in supported:
+        return 'return_datasamples'
+    if 'return_datasample' in supported:
+        return 'return_datasample'
+    raise RuntimeError('The selected MMDetection inferencer does not expose a supported data-sample output option.')
 
 
 @INFERENCERS.register_module(name='pose-estimation')
@@ -123,6 +135,7 @@ class Pose2DInferencer(BaseMMPoseInferencer):
                 if has_mmdet:
                     self.detector = DetInferencer(
                         det_model, det_weights, device=device, scope=det_scope, show_progress=False)
+                    self._detector_output_keyword = _detector_datasample_keyword(self.detector)
                 else:
                     raise RuntimeError(
                         'MMDetection (v3.0.0 or above) is required to build '
@@ -164,7 +177,7 @@ class Pose2DInferencer(BaseMMPoseInferencer):
         if self.cfg.data_mode == 'topdown':
             if self.detector is not None:
                 det_results = self.detector(
-                    input, return_datasample=True)['predictions']
+                    input, **{self._detector_output_keyword: True})['predictions']
                 pred_instance = det_results[0].pred_instances.cpu().numpy()
                 bboxes = np.concatenate(
                     (pred_instance.bboxes, pred_instance.scores[:, None]),

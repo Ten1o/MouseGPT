@@ -1,0 +1,2 @@
+# Lockfile bytes are verified against the environment manifest on every platform.
+ui/environments/*.lock text eol=lf

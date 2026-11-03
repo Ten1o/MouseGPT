@@ -8,7 +8,7 @@ from mousegpt_config import load_config
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
-WORKSPACE_DIR = BASE_DIR / "workspace"
+WORKSPACE_DIR = Path(os.environ.get('MOUSEGPT_NLUI_WORKSPACE', BASE_DIR / 'workspace')).expanduser().resolve()
 
 
 def configure_tracing():
@@ -57,6 +57,15 @@ def image_files(config):
 
 def session_config(name, data_dir=DATA_DIR):
     """Validate an existing paired HDF5/image session without opening its HDF5."""
+    external=os.environ.get('MOUSEGPT_NLUI_H5')
+    if external:
+        file=Path(external).expanduser().resolve()
+        images=Path(os.environ.get('MOUSEGPT_NLUI_IMAGES','')).expanduser().resolve()
+        if name!=file.stem or not file.is_file() or not images.is_dir():
+            raise ValueError('The selected external HDF5 / image directory is unavailable.')
+        config={'file_path':str(file),'img_folder':str(images),'workspace':str(WORKSPACE_DIR/name)}
+        if not image_files(config):raise ValueError('The external image directory has no JPG files.')
+        return config
     if not name or Path(name).name != name or name in {".", ".."}:
         raise ValueError("Select a session name from the downloaded sample data.")
     data_dir = Path(data_dir)
@@ -74,6 +83,10 @@ def session_config(name, data_dir=DATA_DIR):
 
 
 def available_sessions(data_dir=DATA_DIR):
+    if os.environ.get('MOUSEGPT_NLUI_H5'):
+        name=Path(os.environ['MOUSEGPT_NLUI_H5']).stem
+        session_config(name,data_dir)
+        return [name]
     sessions = []
     for file in sorted(Path(data_dir).glob("*.h5")):
         try:

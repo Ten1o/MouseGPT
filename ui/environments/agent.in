@@ -1,0 +1,12 @@
+# Tool-calling Agent. Python 3.12; shares the public application requirements.
+-r ../../4_NLUI/requirements.txt
+# Scientific packages match the Core workflow release.
+numpy==2.2.6
+pandas==2.3.2
+scipy==1.16.1
+scikit-learn==1.7.1
+tables==3.10.1
+Pillow==11.3.0
+requests==2.32.5
+openai==3.26.1
+tqdm==4.67.1

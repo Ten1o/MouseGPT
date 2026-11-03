@@ -151,6 +151,8 @@ if __name__ == '__main__':
         required=True,
         help='input 2d kpts and output 3d kpts folder path.')
     
+    parser.add_argument('--output_path', type=str, default=None,
+                        help='Output NPY file; defaults to tri_new.npy in the 2D predictions directory.')
     args = parser.parse_args()
     
     cali_folder = args.cali_folder
@@ -201,4 +203,4 @@ if __name__ == '__main__':
     print(com.shape)
     print("Triangulation completed!")
 
-    np.save(f'{demo_folder}/tri_new.npy', com)
+    np.save(args.output_path or os.path.join(demo_folder, 'tri_new.npy'), com)

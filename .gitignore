@@ -31,4 +31,28 @@ __pycache__/
 # Generated OpenMMLab packaging mirrors
 .mim/
 /outputs/
+# Local UI credentials and task records
+ui/.api.local.json
+ui/.api.local.tmp
+ui/.runtime/
+/output/env-build-tools/
+/output/env-build-cache/
+/output/install-check-*/
+
+# UI verification artifacts, local data and local dependency checkouts
+/output/
+/.playwright-cli/
+/.vscode/
+/2_VLM/smoke_test_data/
+/3_applications/workspace/
+/4_NLUI/3_applications/
+/1_keypoints/EasyMocap/
+/model_weights_config/
+
+# Private UI planning and release notes
+/docs/ui_design_notes.md
+/docs/ui_pending_validation.md
+/docs/pose_environment_assessment.md
+/docs/ui_release_checklist.md
+/docs/ui_pr_files.txt
 /runs/
