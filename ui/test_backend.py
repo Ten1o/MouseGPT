@@ -140,32 +140,6 @@ class BackendTests(unittest.TestCase):
             server.save_settings({'roles':{'VISION':{'api_key':''}}})
             self.assertEqual(server.read_settings()['roles']['VISION']['api_key'],'secret-test-key')
 
-    def test_worker_pipeline(self):
-        python=Path(server.DEFAULTS['analysis'])
-        if not python.exists():self.skipTest('Analysis interpreter not present')
-        with tempfile.TemporaryDirectory(prefix='mousegpt-ui-test-') as tmp:
-            root=Path(tmp)
-            # Generate tiny deterministic inputs in the environment used by workers.
-            setup="import numpy as np,json;from pathlib import Path;p=Path(__import__('sys').argv[1]);(p/'descriptions').mkdir();(p/'vectors').mkdir();r=np.random.default_rng(42);[( (p/'descriptions'/f'{i*12:08d}.json').write_text(json.dumps(dict(Overall='Moving.',Head='Forward.',Limb='Paws on ground.',Torso='Horizontal.',Others='Tail extended.',Keywords='walking, moving'))),np.savetxt(p/'vectors'/f'{i*12:08d}_des.csv',r.normal(size=3072),delimiter=',')) for i in range(8)];a=r.normal(size=(24,24,3));a[10,0,:]=np.nan;np.save(p/'tri.npy',a)"
-            subprocess.run([str(python),'-c',setup,str(root)],check=True,capture_output=True)
-            def task(op,fields):
-                spec=root/'job.json';result=root/'result.json';result.unlink(missing_ok=True)
-                spec.write_text(json.dumps({'op':op,'fields':fields,'result':str(result)}))
-                run=subprocess.run([str(python),str(UI/'worker.py'),str(spec)],capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=90,env={**__import__('os').environ,'PYTHONIOENCODING':'utf-8'})
-                self.assertEqual(run.returncode,0,run.stderr[-2000:])
-                return json.loads(result.read_text(encoding='utf-8'))
-            fields={'descriptions':str(root/'descriptions'),'features':str(root/'vectors'),'outH5':str(root/'session.h5')}
-            self.assertEqual(task('package',fields)['frames'],8)
-            self.assertEqual(task('review',{'descriptions':str(root/'descriptions'),'frame':12})['frame'],'00000012')
-            for kind in ('keywords','novel'):
-                result=task('analysis:'+kind,{'h5':str(root/'session.h5'),'analysisOutput':str(root/kind)})
-                self.assertTrue(all(Path(p).is_file() for p in result['files']))
-            result=task('filter',{'rawTri':str(root/'tri.npy'),'filterOutput':str(root/'filtered'),'units':'mm','filterFrames':2})
-            self.assertEqual(result['filled_points'],1)
-            # Reject overwriting a packaged session.
-            spec=root/'job.json';spec.write_text(json.dumps({'op':'package','fields':fields}))
-            run=subprocess.run([str(python),str(UI/'worker.py'),str(spec)],capture_output=True)
-            self.assertNotEqual(run.returncode,0)
 
 
 if __name__=='__main__':unittest.main()

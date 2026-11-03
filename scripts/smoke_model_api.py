@@ -2,13 +2,14 @@
 
 import argparse
 import base64
+import math
 from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from mousegpt_config import http_request_config, load_config
+from mousegpt_config import chat_request_options, http_request_config, load_config
 
 
 SAMPLE_IMAGE = ROOT / "2_VLM" / "prompt_test" / "data" / "imgs" / "00001344.jpg"
@@ -33,10 +34,9 @@ def request_body(config, image_path=None):
             {"type": "text", "text": "Name the animal in this image in one short sentence."},
             {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{encoded}"}},
         ]
-    token_field = "max_completion_tokens" if config.provider == "azure_openai" else "max_tokens"
     body = {"model": config.model,
             "messages": [{"role": "user", "content": user_content}],
-            token_field: 256}
+            **chat_request_options(config, max_tokens=256)}
     if config.provider == "deepseek":
         body["thinking"] = {"type": "disabled"}
     return "chat/completions", body
@@ -69,8 +69,11 @@ def run(role, *, live=False, image=None):
         if role == "EMBEDDING":
             values = result["data"][0]["embedding"]
             print(f"Embedding dimensions: {len(values)}")
-            if len(values) != 3072:
-                print("MouseGPT Stage 3 expects 3072 dimensions.", file=sys.stderr)
+            if (not isinstance(values, list) or not values
+                    or any(isinstance(value, bool) or not isinstance(value, (float, int))
+                           or not math.isfinite(value) for value in values)
+                    or not any(values)):
+                print("Embedding must be a finite, nonzero numeric vector.", file=sys.stderr)
                 return 1
         else:
             message = result["choices"][0]["message"].get("content")
@@ -91,7 +94,7 @@ def run(role, *, live=False, image=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--role", required=True, type=str.upper, choices=ROLES)
-    parser.add_argument("--image", type=Path, help="JPEG/PNG for the VISION request; defaults to a bundled sample")
+    parser.add_argument("--image", type=Path, help="JPEG/PNG for VISION; default requires scripts/download_assets.py vlm-demo")
     parser.add_argument("--live", action="store_true", help="Send one potentially billable request")
     args = parser.parse_args(argv)
     if args.image and args.role != "VISION":

@@ -54,12 +54,37 @@ def aligned_session(source):
     with pd.HDFStore(source, mode='r') as store:
         descriptions = store['descriptions']
         features = store['features_des']
+        from mousegpt_embeddings import read_session_embedding_identity
+        identity = read_session_embedding_identity(source, store)
     ids = descriptions['id'].map(str).tolist()
-    if len(ids) != len(set(ids)) or ids != features.index.map(str).tolist():
+    if not ids or len(ids) != len(set(ids)) or ids != features.index.map(str).tolist():
         raise ValueError('Description and embedding frame IDs are not aligned.')
-    if not np.isfinite(features.to_numpy()).all() or (np.linalg.norm(features.to_numpy(), axis=1) == 0).any():
+    if features.shape[1] != identity['dimensions']:
+        raise ValueError('Embedding dimensions do not match the verified session metadata.')
+    if not np.isfinite(features.to_numpy()).all() or (~np.any(features.to_numpy(), axis=1)).any():
         raise ValueError('Embeddings must be finite and nonzero.')
     return descriptions, features
+
+
+def copy_session_with_identity(source, target):
+    """Preserve verified identity when analysis changes a legacy sample's bytes."""
+    import pandas as pd
+    from mousegpt_embeddings import read_session_embedding_identity
+    no_overwrite(target)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    handle, name = tempfile.mkstemp(prefix='.analysis-', suffix='.h5', dir=target.parent)
+    os.close(handle)
+    temporary = Path(name)
+    try:
+        shutil.copy2(source, temporary)
+        # Recognize exact legacy bytes before opening the copy for modification.
+        with pd.HDFStore(temporary, mode='r') as store:
+            identity = read_session_embedding_identity(temporary, store)
+        with pd.HDFStore(temporary, mode='a') as store:
+            store.get_storer('features_des').attrs.embedding_identity = json.dumps(identity, sort_keys=True)
+        os.link(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def run(op, f, tabs):
@@ -138,6 +163,7 @@ def run(op, f, tabs):
         if len(names) != 24 or len(set(names)) != 24 or set(cameras) != {f'data{i}' for i in range(1, 9)}:
             raise ValueError('Mapping JSON requires 24 unique keypoints and cameras data1…data8 mapped to filenames.')
         dest = output(path(f, 'out1'))
+        no_overwrite(dest / 'mapping.json')
         pending = {}
         for camera, filename in cameras.items():
             file = source / filename if source.is_dir() else source
@@ -161,11 +187,11 @@ def run(op, f, tabs):
                 adapter = module('sleap_conversion', '1_keypoints/demo/convert_sleap.py')
                 records = adapter.read_analysis(file, names, mapping.get('tracks', {}).get(camera))
             elif 'MMPose' in f.get('format', ''):
-                records = json.loads(file.read_text(encoding='utf-8'))
-                for frame in records:
-                    inst = frame['instances'][0]
-                    if np.array(inst['keypoints']).shape != (24, 2) or len(inst['keypoint_scores']) != 24:
-                        raise ValueError('Expected 24 keypoints per MMPose frame.')
+                adapter = module('mmpose_conversion', '1_keypoints/demo/convert_mmpose.py')
+                source_names = mapping.get('source_keypoints')
+                if isinstance(source_names, dict):
+                    source_names = source_names.get(camera)
+                records = adapter.read_predictions(file, names, source_names)
             else:
                 raise ValueError('Select DLC, MMPose JSON or SLEAP Analysis HDF5.')
             no_overwrite(dest / f'{camera}.json')
@@ -179,12 +205,15 @@ def run(op, f, tabs):
 
     if op == 'pose':
         videos = path(f, 'videos', True)
-        dest = output(path(f, 'out1'))
+        dest = path(f, 'out1')
+        if dest.exists() and (not dest.is_dir() or any(dest.iterdir())):
+            raise ValueError('Pose output directory is not empty. Choose a new output path to preserve existing results.')
         for i in range(1, 9):
             if not (videos / f'data{i}.mp4').is_file():
                 raise ValueError(f'Missing data{i}.mp4')
         model_args = ['--pose2d', str(path(f, 'poseConfig', True)), '--pose2d-weights', str(path(f, 'poseWeights', True)),
             '--det-model', str(path(f, 'detConfig', True)), '--det-weights', str(path(f, 'detWeights', True))]
+        output(dest)
         for i in range(1, 9):
             print(f'Camera {i}/8', flush=True)
             subprocess.run([sys.executable, str(ROOT / '1_keypoints/demo/inferencer_demo.py'), str(videos / f'data{i}.mp4'),
@@ -249,7 +278,7 @@ def run(op, f, tabs):
                     output(image_dir)
                     filt = r'select=not(mod(n\,12))'
                     raw = output(tmp/f'raw{camera}')
-                    subprocess.run([ffmpeg, '-nostdin', '-n', '-i', str(path(f,f'video{camera}',True)), '-filter:v', filt, '-vsync','0',str(raw/'%08d.jpg')],check=True,stdout=subprocess.DEVNULL)
+                    subprocess.run([ffmpeg, '-nostdin', '-n', '-i', str(path(f,f'video{camera}',True)), '-filter:v', filt, '-fps_mode','passthrough',str(raw/'%08d.jpg')],check=True,stdout=subprocess.DEVNULL)
                     extractor.rename(fps, raw, image_dir, 0)
             key_dir = output(tmp/'keypoints')
             for camera in (3,5):
@@ -309,29 +338,14 @@ def run(op, f, tabs):
         return {'files':[str(dest)],'frames':len(chosen)}
 
     if op == 'package':
-        import pandas as pd
         exporter = module('ui_export','3_applications/create_h5.py')
         source = path(f,'descriptions',True)
         features = path(f,'features',True)
         target = path(f,'outH5')
-        no_overwrite(target)
-        by_id = exporter.description_paths_by_id(source)
-        ids = sorted(by_id)
-        actual = {p.name[:-8] for p in features.glob('*_des.csv')}
-        if actual != set(ids):
-            raise ValueError('Description and vector IDs differ. Embed every description before packaging, or select a matching subset directory.')
-        vectors = exporter.load_data_matrix([features/f'{i}_des.csv' for i in ids])
-        descriptions = [exporter.read_description(by_id[i]) for i in ids]
-        output(target.parent)
-        temp = target.with_suffix('.building.h5')
-        try:
-            with pd.HDFStore(temp,mode='w') as store:
-                store.put('descriptions',pd.DataFrame({'id':ids,'description':descriptions}))
-                store.put('features_des',pd.DataFrame(vectors,index=ids))
-            temp.replace(target)
-        finally:
-            temp.unlink(missing_ok=True)
-        return {'files':[str(target)],'frames':len(ids)}
+        linkage = f.get('withLinkage', 'no')
+        if linkage not in ('yes', 'no', True, False):
+            raise ValueError('Select whether to create a clustering hierarchy.')
+        return exporter.export_session(source, features, target, with_linkage=linkage in ('yes', True))
 
     if op == 'session':
         h5 = path(f,'h5',True)
@@ -340,22 +354,31 @@ def run(op, f, tabs):
         ids = [str(i).zfill(8) for i in desc.id]
         present = {p.stem for p in imgs.glob('*.jpg')}
         missing = sorted(set(ids)-present)
+        if missing:
+            raise ValueError(f'Missing preview images for {len(missing)} session frames: {missing[:10]}')
         return {'frames':len(ids),'dimensions':features.shape[1], 'matched_images':len(set(ids)&present),
             'missing_images':len(missing),'missing_examples':missing[:10], 'frame_ids':ids,
             'files':[str(h5),str(imgs)]}
 
     if op == 'review':
+        from review_store import frame_reference
+        from mousegpt_descriptions import read_description_snapshot
         exporter = module('ui_review','3_applications/create_h5.py')
         source = path(f,'descriptions',True)
         records = exporter.description_paths_by_id(source)
         frame = str(f.get('frame','0')).zfill(8)
         if frame not in records:
             raise ValueError(f'Description not found for frame {frame}')
-        desc = exporter.read_description(records[frame])
+        reference = frame_reference(source, frame)
+        desc, fingerprint = read_description_snapshot(
+            records[frame], expected_sha256=reference['source_sha256'])
+        if fingerprint != reference['source_sha256'] or frame_reference(source, frame) != reference:
+            raise ValueError('Source description changed while loading. Reload this frame.')
         velocity = {}
         if f.get('velocity'):
             velocity = json.loads(path(f,'velocity',True).read_text(encoding='utf-8')).get(str(int(frame)),{})
-        return {'description':desc,'velocity':velocity,'frame':frame,'frame_ids':list(records)}
+        return {'description':desc,'velocity':velocity,'frame':frame,'frame_ids':list(records),
+                **reference}
 
     if op == 'project':
         import umap
@@ -419,7 +442,7 @@ def run(op, f, tabs):
                 chunk=coarse.request_cluster_merges(dict(items[start:start+60]),merged['New Cluster Names'])
                 merged['New Cluster Names'].update(chunk['New Cluster Names']);merged['Mapping'].update(chunk['Mapping'])
             labels,names=coarse.update_cluster_labels(labels,merged)
-            target=dest/source.name;no_overwrite(target);shutil.copy2(source,target)
+            target=dest/source.name;copy_session_with_identity(source,target)
             categories,assigned=coarse.category_tables(labels,names,ids)
             with pd.HDFStore(target) as store:
                 store.put('linkage_matrix',pd.DataFrame(Z));store.put('category_All_cluster_ui',categories);store.put('label_All_cluster_ui',assigned)
@@ -434,7 +457,7 @@ def run(op, f, tabs):
             prompt=path(f,'finePrompt',True).read_text(encoding='utf-8')
             part=f.get('part','Head')
             labels,counts,categories=fine.get_labels_category(prompt,categories,values,part,max_category_updates=int(f.get('maxUpdates',20)),output_path=str(dest/'categories.json'))
-            target=dest/source.name;no_overwrite(target);shutil.copy2(source,target)
+            target=dest/source.name;copy_session_with_identity(source,target)
             with pd.HDFStore(target) as store:
                 store.put(f'category_{part}_keyword_ui',pd.DataFrame(list(categories)))
                 store.put(f'label_{part}_keyword_ui',pd.DataFrame(labels,index=ids))

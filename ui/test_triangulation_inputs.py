@@ -54,7 +54,8 @@ class TriangulationInputs(unittest.TestCase):
     def test_invalid_request_does_not_queue_a_task(self):
         import server
         count=len(server.JOBS)
-        with self.assertRaisesRegex(ValueError,'2D JSON'):server.start_job({'op':'triangulate','fields':{}})
+        with patch.object(server,'require_environment'),self.assertRaisesRegex(ValueError,'2D JSON'):
+            server.start_job({'op':'triangulate','fields':{}})
         self.assertEqual(len(server.JOBS),count)
 
 

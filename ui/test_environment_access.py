@@ -6,6 +6,11 @@ from unittest.mock import patch
 from environment_access import access,same_python
 from environment_manager import PROFILES,EnvironmentManager,atomic_json
 import server
+from environment_validation import application_fingerprint
+
+def report(profile, **values):
+    return {"passed":True, "application_fingerprint":application_fingerprint(profile), **values}
+
 
 
 class EnvironmentAccessTests(unittest.TestCase):
@@ -18,7 +23,7 @@ class EnvironmentAccessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             python=Path(tmp)/'python.exe';python.touch()
             interpreters={'analysis':str(python),'preprocess':str(python),'projection':str(python),'pose':str(Path(tmp)/'pose.exe')}
-            record={'id':'core-one','profile':'core','python':str(python),'validation':{'passed':True,'versions':{'matplotlib':'3.10.1'}}}
+            record={'id':'core-one','profile':'core','python':str(python),'validation':report('core',versions={'matplotlib':'3.10.1'})}
             registry={'environments':[record],'active':{}}
             self.assertFalse(access('describe',registry,interpreters,PROFILES)['ready'])
             registry['active']['core']='core-one'
@@ -34,8 +39,8 @@ class EnvironmentAccessTests(unittest.TestCase):
             core=Path(tmp)/'core.exe';core.touch();pose=Path(tmp)/'pose.exe';pose.touch()
             interpreters={'analysis':str(core),'preprocess':str(pose),'pose':str(pose)}
             registry={'active':{'core':'c','pose':'p'},'environments':[
-                {'id':'c','profile':'core','python':str(core),'validation':{'passed':True,'versions':{}}},
-                {'id':'p','profile':'pose','python':str(pose),'validation':{'passed':True,'versions':{'matplotlib':'3.10.1'}}}]}
+                {'id':'c','profile':'core','python':str(core),'validation':report('core',versions={})},
+                {'id':'p','profile':'pose','python':str(pose),'validation':report('pose',versions={'matplotlib':'3.10.1'})}]}
             self.assertEqual(access('preprocess',registry,interpreters,PROFILES)['profile'],'pose')
             self.assertEqual(access('filter',registry,interpreters,PROFILES)['role'],'pose')
             del registry['active']['pose']
@@ -58,7 +63,7 @@ class EnvironmentAccessTests(unittest.TestCase):
     def test_activation_unlocks_existing_configured_interpreter(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);python=root/'python.exe';python.touch();manager=EnvironmentManager(root/'home')
-            atomic_json(manager.registry,{'environments':[{'id':'c','profile':'core','python':str(python),'validation':{'passed':True}}],'active':{}})
+            atomic_json(manager.registry,{'environments':[{'id':'c','profile':'core','python':str(python),'validation':report('core')}],'active':{}})
             cfg={'interpreters':{'analysis':str(python),'preprocess':str(python),'projection':str(python)}}
             with patch.object(server,'ENVIRONMENTS',manager),patch.object(server,'read_settings',return_value=cfg):
                 self.assertFalse(server.environment_access('describe')['ready'])

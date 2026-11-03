@@ -1,0 +1,7 @@
+# Portable CPU interface environment; install from the repository root.
+-r ../requirements-api.txt
+gradio==6.31.0
+langchain-classic==1.0.8
+langchain-openai==1.7.3
+langchain-experimental==0.4.2
+scikit-learn>=1.5,<2

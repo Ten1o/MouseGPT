@@ -27,7 +27,14 @@ This creates `2_VLM/prompt_test/data/test_data.jsonl` and an `imgs/` directory c
 | `images` | Image paths relative to the JSONL file. |
 | `response` | An example model response, included for illustration. |
 
-Validation runs locally without model libraries or a server. To generate new descriptions, follow the [Stage 2 guide](../2_VLM/readme.md) to deploy a compatible checkpoint and run the inference client. The client sends only the prompt and images; the stored responses are neither input to the model nor expert reference annotations. Check the [model repository](https://huggingface.co/Ten1o/MouseGPT) for checkpoint availability.
+Validation runs locally without a model server. To generate new descriptions with a hosted third-party VLM, follow the [researcher quick start](../README.md#quick-start-use-a-hosted-vlm): install `requirements-api.txt`, configure the VISION and EMBEDDING roles, then run:
+
+```bash
+python 2_VLM/prompt_test/client_test.py \
+  --backend api --limit 3 --output-dir runs/api-demo/demo
+```
+
+This produces validated descriptions and matching frame previews for downstream embedding, packaging, and search. It requires no local MouseGPT checkpoint or GPU. The client sends only prompts and images; stored responses are neither model input nor expert reference annotations. To use local MouseGPT weights instead, follow [SWIFT model serving](../2_VLM/readme.md#serve-a-mousegpt-model) and check the [model repository](https://huggingface.co/Ten1o/MouseGPT) for checkpoint availability.
 
 ## 2. Explore a prepared session
 
@@ -47,7 +54,7 @@ The installed files are:
 
 The HDF5 contains descriptions and cached embeddings for 5,999 frames. Every stored frame has an image; the additional preview `00037368.jpg` has no cached feature row. Align images and records by **frame ID**, rather than image-list position.
 
-Follow the [Stage 4 guide](../4_NLUI/readme.md) to inspect descriptions, retrieve frames, search behavior, and use the available analysis tools. Pose estimation and MouseGPT inference do not need to be rerun for this prepared session. Conversation, semantic search, and some analysis tools require the external APIs described in that guide.
+Follow the [Stage 4 guide](../4_NLUI/readme.md) to inspect descriptions, retrieve frames, search behavior, and use the available analysis tools. Pose estimation and MouseGPT inference do not need to be rerun for this prepared session. Conversation, semantic search, and some analysis tools require the external APIs described in that guide. The published session uses official OpenAI `text-embedding-3-large` vectors; its exact file hash is recognized for compatibility. Changing the embedding service/model requires regenerating the vectors and packaging a new session from the descriptions.
 
 ## Offline installation and integrity checks
 

@@ -20,6 +20,8 @@ import urllib.request
 import zipfile
 
 from local_paths import APP_HOME
+from environment_validation import application_fingerprint, validation_is_current
+from process_control import process_group_options, terminate_process_tree
 
 HERE=Path(__file__).resolve().parent
 PROFILE_DIR=HERE/'environments'
@@ -31,8 +33,8 @@ PROFILES={
             'roles':['pose'],'install_supported':False,'description':'Configure the Pose environment manually, then validate it here and select Use.'},
     'core':{'name':'Core workflow · CPU & API','release':'2026.10.29.2','python':'3.12.11',
             'roles':['analysis','preprocess','projection'],'description':'Image preprocessing, Vision API, embeddings, HDF5 and behavior analysis.'},
-    'agent':{'name':'Tool-calling Agent','release':'2026.10.29.1','python':'3.10.18',
-             'roles':['agent'],'description':'The existing Gradio / LangChain Agent, isolated from the newer API SDK.'},
+    'agent':{'name':'Tool-calling Agent','release':'2026.11.03.1','python':'3.12.11',
+             'roles':['agent'],'description':'The Gradio / LangChain Agent using the shared public application requirements.'},
 }
 
 
@@ -94,7 +96,7 @@ def dependency_lock(profile):
 
 def profile_spec(profile):
     spec=dict(PROFILES[profile])
-    if (profile,platform_key()) in {('core','macos-x86_64'),('agent','macos-arm64')}:
+    if (profile,platform_key()) == ('core','macos-x86_64'):
         spec['release']='2026.11.02.1'
     return spec
 
@@ -117,7 +119,7 @@ def system_report(home=APP_HOME):
     elif free<3*1024**3:reason='At least 3 GB of free space is required.'
     return {'os':platform.system(),'os_version':platform.version(),'architecture':platform.machine(),
             'platform_key':key,'platform_label':PLATFORM_LABELS.get(key,'Unsupported platform'),
-            'validation_status':'existing-release' if key=='windows-x86_64' else 'pending-platform-verification',
+            'validation_status':'profile-specific',
             'supported':supported,'free_gb':round(free/(1024**3),1),'minimum_free_gb':3,
             'install_supported':supported and free>=3*1024**3,'app_home':str(home),'reason':reason}
 
@@ -138,7 +140,10 @@ class EnvironmentManager:
         registry=self.read_registry()
         records=[]
         for row in registry['environments']:
-            row=dict(row);row['available']=Path(row['python']).is_file();records.append(row)
+            row=dict(row);row['available']=Path(row['python']).is_file()
+            row['validation_current']=validation_is_current(row['profile'],row.get('validation',{}))
+            row['limitations']=[] if row['validation_current'] else ['Application requirements changed. Validate this environment again before using it.']
+            records.append(row)
         return {'system':system_report(self.home),'profiles':[{**profile_spec(name),'id':name,'lock_available':dependency_lock(name).is_file()} for name in PROFILES],
                 'environments':records,'active':registry.get('active',{}),'operation':state}
 
@@ -148,7 +153,7 @@ class EnvironmentManager:
     def command(self,args):
         if self.cancelled.is_set():raise RuntimeError('Operation cancelled.')
         process=subprocess.Popen([str(a) for a in args],env=clean_env(self.home),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
-            text=True,encoding='utf-8',errors='replace',creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
+            text=True,encoding='utf-8',errors='replace',**process_group_options())
         self.process=process
         if self.cancelled.is_set():self.cancel()
         try:
@@ -240,7 +245,7 @@ class EnvironmentManager:
                 self.state['status']='validating';self.log('Running offline compatibility and file-processing checks.')
                 self.command([python,'-I',HERE/'environment_probe.py',profile,'--output',report])
                 validation=json.loads(report.read_text(encoding='utf-8'))
-                if not validation.get('passed'):raise ValueError('Environment validation did not pass.')
+                if not validation_is_current(profile,validation):raise ValueError('Environment validation did not match the current application. Run validation again.')
                 if action=='install' and validation['python']!=spec['python']:raise ValueError('Installed Python does not match the release.')
                 # Ready records are written only after every command succeeds.
                 record={'id':secrets.token_hex(10),'profile':profile,'release':spec['release'] if action=='install' else 'custom','python':str(python),
@@ -262,7 +267,7 @@ class EnvironmentManager:
             registry=self.read_registry()
             record=next((r for r in registry['environments'] if r['id']==identifier),None)
             if not record or not Path(record['python']).is_file():raise ValueError('Validated environment not found.')
-            if not record['validation'].get('passed'):raise ValueError('Environment validation is required.')
+            if not validation_is_current(record['profile'],record.get('validation',{})):raise ValueError('Application requirements changed. Validate this environment again before using it.')
             roles={role:record['python'] for role in PROFILES[record['profile']]['roles']}
             if persist:persist(roles)
             registry.setdefault('active',{})[record['profile']]=identifier
@@ -271,6 +276,4 @@ class EnvironmentManager:
 
     def cancel(self):
         self.cancelled.set();process=self.process
-        if process is not None and process.poll() is None:
-            if os.name=='nt':subprocess.run(['taskkill','/PID',str(process.pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-            else:process.terminate()
+        if process is not None:terminate_process_tree(process)

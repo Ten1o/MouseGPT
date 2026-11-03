@@ -7,8 +7,49 @@ import platform
 import sys
 import tempfile
 
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from environment_validation import application_fingerprint
+
+
+def check_repository_agent(root):
+    """Build the actual application against a temporary session, without networking."""
+    import os
+    import subprocess
+    from PIL import Image
+
+    project = Path(__file__).resolve().parents[1]
+    previews = root / "sample_imgs"
+    previews.mkdir()
+    for frame in (0, 12, 24, 36):
+        Image.new("RGB", (64, 32), "gray").save(previews / f"{frame:08d}.jpg")
+    env = {k:v for k,v in os.environ.items()
+           if not k.startswith(("MOUSEGPT_", "OPENAI_", "AZURE_OPENAI_", "LANGCHAIN_", "LANGSMITH_"))}
+    env.update(MOUSEGPT_API_KEY="offline-check",
+               MOUSEGPT_NLUI_H5=str(root / "sample.h5"),
+               MOUSEGPT_NLUI_IMAGES=str(previews),
+               MOUSEGPT_NLUI_WORKSPACE=str(root / "workspace"),
+               GRADIO_ANALYTICS_ENABLED="False", LANGCHAIN_TRACING_V2="false",
+               LANGSMITH_TRACING="false", PYTHONNOUSERSITE="1")
+    script = "\n".join([
+        "import runpy, socket, sys",
+        "def deny_network(*args, **kwargs): raise RuntimeError('Offline environment validation must not access the network.')",
+        "socket.socket.connect = deny_network",
+        "socket.create_connection = deny_network",
+        "sys.path[:0] = " + repr([str(project / "4_NLUI"), str(project)]),
+        "import mousegpt_config",
+        "mousegpt_config.read_env_file = lambda *args, **kwargs: {}",
+        "sys.argv = " + repr([str(project / "4_NLUI/agent.py"), "--check"]),
+        "runpy.run_path(sys.argv[0], run_name='__main__')",
+    ])
+    result = subprocess.run([sys.executable, "-I", "-c", script], env=env,
+                            cwd=root, capture_output=True, text=True, timeout=90)
+    if result.returncode or "Interface ready:" not in result.stdout:
+        raise RuntimeError("Repository Agent startup failed: " + (result.stderr or result.stdout)[-3000:])
+
+
 
 def probe(profile):
+    fingerprint=application_fingerprint(profile)
     if profile=='pose':
         import os
         os.environ.setdefault('NO_ALBUMENTATIONS_UPDATE','1')
@@ -24,7 +65,7 @@ def probe(profile):
         import matplotlib
         from easymocap.mytools.triangulator import iterative_triangulate
         assert savgol_filter(np.arange(16.),15,3).shape==(16,)
-        return {'passed':True,'profile':'pose','python':platform.python_version(),'executable':sys.executable,'platform':platform.platform(),
+        return {'passed':True,'application_fingerprint':fingerprint,'profile':'pose','python':platform.python_version(),'executable':sys.executable,'platform':platform.platform(),
                 'checks':['OpenCV','MMPose inferencer import','MMDetection import','EasyMocap triangulation import','SciPy filtering'],
                 'versions':{'numpy':np.__version__,'torch':torch.__version__,'opencv':cv2.__version__,'mmdet':mmdet.__version__,'matplotlib':matplotlib.__version__}}
     import numpy as np
@@ -76,22 +117,15 @@ def probe(profile):
             pd.DataFrame({'count':[1]}).to_excel(root/'counts.xlsx',index=False)
             checks.extend(['OpenCV image reading','UMAP projection','FFmpeg executable','Responses SDK interface','Excel export'])
         elif profile=='agent':
-            import gradio as gr
-            import langchain_openai
-            from langchain.agents import create_tool_calling_agent,AgentExecutor
-            from langchain_experimental.tools import PythonREPLTool
-            from langchain_core.prompts import ChatPromptTemplate,MessagesPlaceholder
-            model=langchain_openai.ChatOpenAI(model='offline-model',api_key='offline-check')
-            prompt=ChatPromptTemplate.from_messages([('system','Offline validation.'),('human','{input}'),MessagesPlaceholder('agent_scratchpad')])
-            agent=create_tool_calling_agent(model,[PythonREPLTool()],prompt)
-            AgentExecutor(agent=agent,tools=[PythonREPLTool()])
-            with gr.Blocks() as demo:
-                gr.Chatbot(type='messages');gr.Textbox()
-            checks.extend(['Gradio message UI construction','Tool-calling Agent construction'])
+            check_repository_agent(root)
+            checks.append('Repository Agent --check with external HDF5/images and networking disabled')
         else:raise ValueError('Unsupported profile.')
     versions={name:metadata.version(name) for name in ['numpy','pandas','tables','scipy','scikit-learn','Pillow','openai']}
     if profile=='core':versions['matplotlib']=metadata.version('matplotlib')
-    return {'passed':True,'profile':profile,'python':platform.python_version(),'executable':sys.executable,
+    if profile=='agent':
+        for name in ('gradio','langchain-classic','langchain-openai','langchain-experimental'):
+            versions[name]=metadata.version(name)
+    return {'passed':True,'application_fingerprint':fingerprint,'profile':profile,'python':platform.python_version(),'executable':sys.executable,
             'platform':platform.platform(),'checks':checks,'versions':versions}
 
 

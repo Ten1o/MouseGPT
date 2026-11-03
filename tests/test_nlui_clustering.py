@@ -214,10 +214,14 @@ def test_similarity_tools_reject_invalid_stored_vectors_before_query(tmp_path, m
 
 def test_search_and_classification_return_matching_stored_ids(tmp_path, monkeypatch):
     from tools_function import search as searching, classification as classifying
+    from mousegpt_config import load_config
+    from mousegpt_embeddings import embedding_identity
     path = tmp_path / 'valid_vectors.h5'
     with pd.HDFStore(path, 'w') as store:
         store.put('features_des', pd.DataFrame([[1., 0.], [0., 1.]], index=[8, 16]))
         store.put('descriptions', pd.DataFrame({'id': [8, 16], 'description': ['a', 'b']}))
+        config = load_config('EMBEDDING', overrides={'api_key': 'key'})
+        store.get_storer('features_des').attrs.embedding_identity = json.dumps(embedding_identity(config, 2))
     monkeypatch.setattr(searching, 'encode_string_to_feature', Mock(return_value=[0., 1.]))
     ids, similarities = searching.search(path, 'walking', 'key')
     assert ids == ['00000016', '00000008']

@@ -100,6 +100,28 @@ def sdk_client(config, *, max_retries=0, timeout=60):
     return OpenAI(base_url=config.endpoint, **options)
 
 
+def chat_request_options(config, *, max_tokens, temperature=None, seed=None,
+                         top_p=None):
+    """Choose conservative Chat Completions options for a resolved model.
+
+    OpenAI's completion budget includes reasoning tokens and replaces the
+    deprecated max_tokens field. Azure deployment aliases do not reveal model
+    capabilities, so optional sampling controls are omitted there. Compatible
+    services retain the widely supported max_tokens field and their defaults.
+    Only known non-reasoning OpenAI families receive sampling controls.
+    """
+    if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or max_tokens < 1:
+        raise ValueError("max_tokens must be a positive integer.")
+    token_field = ("max_completion_tokens" if config.provider in {"openai", "azure_openai"}
+                   else "max_tokens")
+    options = {token_field: max_tokens}
+    if config.provider == "openai" and config.model.startswith(("gpt-4", "gpt-3.5")):
+        options.update({name: value for name, value in {
+            "temperature": temperature, "seed": seed, "top_p": top_p,
+        }.items() if value is not None})
+    return options
+
+
 def read_env_file(path=CONFIG_FILE):
     """Read literal KEY=VALUE lines; no shell expansion or os.environ writes."""
     path = Path(path)

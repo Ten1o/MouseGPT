@@ -13,6 +13,7 @@ import urllib.error
 
 import server
 from environment_manager import EnvironmentManager,atomic_json
+from environment_validation import application_fingerprint
 
 
 class EnvironmentHTTP(unittest.TestCase):
@@ -43,7 +44,7 @@ class EnvironmentHTTP(unittest.TestCase):
     def test_activation_persists_interpreters_and_blocks_when_task_busy(self):
         with tempfile.TemporaryDirectory() as tmp:
             home=Path(tmp);manager=EnvironmentManager(home);python=home/'python.exe';python.touch()
-            atomic_json(manager.registry,{'schema':1,'environments':[{'id':'checked','profile':'core','release':'custom','python':str(python),'managed':False,'validation':{'passed':True,'checks':['test'],'python':'3.12.11'}}],'active':{}})
+            atomic_json(manager.registry,{'schema':1,'environments':[{'id':'checked','profile':'core','release':'custom','python':str(python),'managed':False,'validation':{'passed':True,'application_fingerprint':application_fingerprint('core'),'checks':['test'],'python':'3.12.11'}}],'active':{}})
             httpd=ThreadingHTTPServer(('127.0.0.1',0),server.Handler);port=httpd.server_address[1]
             thread=threading.Thread(target=httpd.serve_forever,daemon=True)
             with patch.object(server,'PORT',port),patch.object(server,'ENVIRONMENTS',manager),patch.object(server,'SETTINGS',home/'settings.json'),patch.object(server,'AGENT',None):

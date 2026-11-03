@@ -65,7 +65,7 @@ def extract_frames(input_folder, output_folder, start_time, end_time, fps, ffmpe
             raw.mkdir()
             ready = temporary / destination.name
             command = [str(ffmpeg), "-nostdin", "-n", "-i", str(input_file),
-                       "-filter:v", filters, "-vsync", "0", str(raw / "%08d.jpg")]
+                       "-filter:v", filters, "-fps_mode", "passthrough", str(raw / "%08d.jpg")]
             subprocess.run(command, check=True)
             rename(fps, raw, ready, start_time)
             staged.append((ready, destination))

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-02",
+  "updated": "2026-11-03",
   "limits": {
     "macos_minimum": "14.0",
     "linux_libc": "glibc >= 2.28",
@@ -26,18 +26,21 @@
     {
       "platform": "windows-x86_64",
       "profile": "agent",
-      "release": "2026.10.29.1",
-      "python": "3.10.18",
+      "release": "2026.11.03.1",
+      "python": "3.12.11",
       "lock": "agent.lock",
-      "lock_sha256": "dc6dc3e351d5efcacf44942adcf79a0c39d0fb563a5786e391fe08aa77fd3b67",
-      "packages": 110,
+      "lock_sha256": "af65dd0157eb5eb135e17ef05d40fc5164229c41cec72bfb5af0628747439b71",
+      "packages": 106,
       "notable_versions": {
-        "numpy": "1.26.4",
-        "tables": "3.8.0",
-        "blosc2": "2.0.0",
-        "openai": "1.35.4"
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "openai": "3.26.1",
+        "gradio": "6.31.0",
+        "langchain-classic": "1.0.8",
+        "langchain-openai": "1.7.3"
       },
-      "runtime_validation": "existing-windows-evidence"
+      "runtime_validation": "pending-current-release-runtime"
     },
     {
       "platform": "linux-x86_64",
@@ -59,18 +62,21 @@
     {
       "platform": "linux-x86_64",
       "profile": "agent",
-      "release": "2026.10.29.1",
-      "python": "3.10.18",
+      "release": "2026.11.03.1",
+      "python": "3.12.11",
       "lock": "agent-linux-x86_64.lock",
-      "lock_sha256": "879bc39512be93d4c7230f8a5321d8cf11e09c9e4e7a202dd5984c3256334bef",
-      "packages": 110,
+      "lock_sha256": "266edffff1cb4d8d3fab71ad61e0a95d721f4e9fc6f3258c5efb6e70ba13cc13",
+      "packages": 105,
       "notable_versions": {
-        "numpy": "1.26.4",
-        "tables": "3.8.0",
-        "blosc2": "2.0.0",
-        "openai": "1.35.4"
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "openai": "3.26.1",
+        "gradio": "6.31.0",
+        "langchain-classic": "1.0.8",
+        "langchain-openai": "1.7.3"
       },
-      "runtime_validation": "user-confirmed-ubuntu-scope; other-linux-pending"
+      "runtime_validation": "pending-current-release-runtime"
     },
     {
       "platform": "linux-aarch64",
@@ -92,18 +98,21 @@
     {
       "platform": "linux-aarch64",
       "profile": "agent",
-      "release": "2026.10.29.1",
-      "python": "3.10.18",
+      "release": "2026.11.03.1",
+      "python": "3.12.11",
       "lock": "agent-linux-aarch64.lock",
-      "lock_sha256": "80bde2c6da32fefc5e5202f6ae9edeb11bee834ca111078003bc5d2a9336a231",
-      "packages": 110,
+      "lock_sha256": "266edffff1cb4d8d3fab71ad61e0a95d721f4e9fc6f3258c5efb6e70ba13cc13",
+      "packages": 105,
       "notable_versions": {
-        "numpy": "1.26.4",
-        "tables": "3.8.0",
-        "blosc2": "2.0.0",
-        "openai": "1.35.4"
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "openai": "3.26.1",
+        "gradio": "6.31.0",
+        "langchain-classic": "1.0.8",
+        "langchain-openai": "1.7.3"
       },
-      "runtime_validation": "pending-real-machine"
+      "runtime_validation": "pending-current-release-runtime"
     },
     {
       "platform": "macos-x86_64",
@@ -125,18 +134,21 @@
     {
       "platform": "macos-x86_64",
       "profile": "agent",
-      "release": "2026.10.29.1",
-      "python": "3.10.18",
+      "release": "2026.11.03.1",
+      "python": "3.12.11",
       "lock": "agent-macos-x86_64.lock",
-      "lock_sha256": "80bde2c6da32fefc5e5202f6ae9edeb11bee834ca111078003bc5d2a9336a231",
-      "packages": 110,
+      "lock_sha256": "266edffff1cb4d8d3fab71ad61e0a95d721f4e9fc6f3258c5efb6e70ba13cc13",
+      "packages": 105,
       "notable_versions": {
-        "numpy": "1.26.4",
-        "tables": "3.8.0",
-        "blosc2": "2.0.0",
-        "openai": "1.35.4"
+        "numpy": "2.2.6",
+        "tables": "3.10.1",
+        "blosc2": "4.14.1",
+        "openai": "3.26.1",
+        "gradio": "6.31.0",
+        "langchain-classic": "1.0.8",
+        "langchain-openai": "1.7.3"
       },
-      "runtime_validation": "pending-real-machine"
+      "runtime_validation": "pending-current-release-runtime"
     },
     {
       "platform": "macos-arm64",
@@ -158,18 +170,21 @@
     {
       "platform": "macos-arm64",
       "profile": "agent",
-      "release": "2026.11.02.1",
-      "python": "3.10.18",
+      "release": "2026.11.03.1",
+      "python": "3.12.11",
       "lock": "agent-macos-arm64.lock",
-      "lock_sha256": "b6e002a5e75cbce9d53b4887bb2a267b6f121d8b8bfefa6f0bf97a244237f173",
-      "packages": 109,
+      "lock_sha256": "80cbe38c2bc6836860a2e1d310a4cde75ae397112d97a1cc3ed8bb281ddb48b7",
+      "packages": 101,
       "notable_versions": {
-        "numpy": "1.26.4",
+        "numpy": "2.2.6",
         "tables": "3.10.1",
         "blosc2": "2.7.1",
-        "openai": "1.35.4"
+        "openai": "3.26.1",
+        "gradio": "6.31.0",
+        "langchain-classic": "1.0.8",
+        "langchain-openai": "1.7.3"
       },
-      "runtime_validation": "pending-real-machine"
+      "runtime_validation": "verified-managed-install-and-offline-agent-startup-2026-11-03"
     }
   ]
 }

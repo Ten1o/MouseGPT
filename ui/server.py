@@ -1,6 +1,7 @@
 """Local-only MouseGPT UI server. Static assets are allowlisted; secrets stay server-side."""
 import argparse
 import base64
+import copy
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import importlib.util
@@ -19,10 +20,12 @@ from urllib.parse import urlsplit, parse_qs
 ROOT=Path(__file__).resolve().parents[1]
 UI=ROOT/'ui'
 sys.path.insert(0,str(ROOT))
-from mousegpt_config import load_config, read_env_file, ROLES, DEFAULT_MODELS
+from mousegpt_config import load_config, read_env_file, ROLES, DEFAULT_MODELS, PROVIDER_ENDPOINTS
 from local_paths import APP_HOME, SETTINGS_FILE, RUNTIME_DIR, backend_id
+from review_store import review_source, save_review_batch
 from environment_manager import EnvironmentManager,PROFILES
 from environment_access import access as check_environment_access
+from process_control import process_group_options, terminate_process_tree
 
 RUNTIME=RUNTIME_DIR
 SETTINGS=SETTINGS_FILE
@@ -46,18 +49,14 @@ class LocalUIServer(ThreadingHTTPServer):
             self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)
         super().server_bind()
 
-ENVROOT=Path.home()/'anaconda3/envs'
-DEFAULTS={'analysis':str(ENVROOT/'swift-langchain/python.exe'),
-          'pose':str(ENVROOT/'mmpose310/python.exe'),
-          'preprocess':str(ENVROOT/'mmpose310/python.exe'),
-          'projection':str(ENVROOT/'mgpt_windows/python.exe'),
-          'agent':str(ENVROOT/'swift-langchain/python.exe')}
+# Interpreter paths are selected by explicitly activating validated environments.
+DEFAULTS={role:'' for role in ('analysis','pose','preprocess','projection','agent')}
 
 
 def read_settings():
     source=SETTINGS
     if not source.exists() and SETTINGS==SETTINGS_FILE and (UI/'.api.local.json').is_file():source=UI/'.api.local.json'
-    return json.loads(source.read_text(encoding='utf-8')) if source.exists() else {'roles':{},'interpreters':DEFAULTS}
+    return json.loads(source.read_text(encoding='utf-8')) if source.exists() else {'roles':{},'interpreters':DEFAULTS.copy()}
 
 
 def environment(settings=None):
@@ -120,15 +119,68 @@ def export_api_settings(include_api_keys=False):
     return {'format':'mousegpt-api-settings','schemaVersion':1,'contains_api_keys':any('api_key' in r for r in roles.values()),'roles':roles}
 
 
+def service_identity(fields):
+    provider = fields.get('provider') or 'openai'
+    endpoint = fields.get('endpoint') or PROVIDER_ENDPOINTS.get(provider, '')
+    return provider, endpoint.rstrip('/')
+
+
+def protect_saved_credentials(previous, updated, body, new_env):
+    """A blank password may retain a key only for its existing destination."""
+    before_shared = previous.get('shared', {})
+    after_shared = updated.get('shared', {})
+    if (before_shared.get('api_key') and after_shared.get('api_key')
+            and service_identity(before_shared) != service_identity(after_shared)
+            and not str(body.get('shared', {}).get('api_key', '')).strip()):
+        raise ValueError('Enter a new Default API key when changing its provider or endpoint.')
+    try:
+        old_env = environment(previous)
+    except ValueError:
+        old_env = None
+    for role in ROLES:
+        # Destination checks do not depend on a model/deployment or API version.
+        # An incomplete, unused role should not block unrelated interpreter edits.
+        identity_options = {'model': DEFAULT_MODELS[role], 'api_version': 'identity-check'}
+        try:
+            new = load_config(role, overrides=identity_options, env=new_env,
+                              require_key=False, validate_capabilities=False)
+        except ValueError:
+            continue  # This role cannot send a request until its URL is valid.
+        if not new.api_key:
+            continue
+        try:
+            if old_env is None:
+                raise ValueError('Previous configuration is incomplete.')
+            old = load_config(role, overrides=identity_options, env=old_env,
+                              require_key=False, validate_capabilities=False)
+            old_identity = old.provider, old.endpoint
+        except ValueError:
+            old_fields = {**before_shared, **previous.get('roles', {}).get(role, {})}
+            old_identity = service_identity(old_fields)
+        if old_identity == (new.provider, new.endpoint):
+            continue
+        # Explicitly entered keys authorize the new destination. Resetting an
+        # override to Default API deliberately selects that service's key.
+        explicit_role_key = str(body.get('roles', {}).get(role, {}).get('api_key', '')).strip()
+        dedicated = updated.get('roles', {}).get(role, {}).get('api_key')
+        explicit_shared_key = str(body.get('shared', {}).get('api_key', '')).strip()
+        inherited_reset = role in body.get('inherit', []) and not dedicated
+        if explicit_role_key or (not dedicated and explicit_shared_key) or inherited_reset:
+            continue
+        raise ValueError(f'Enter a new {role} API key when changing its provider or endpoint.')
+
+
 def save_settings(body):
     with CONFIG_LOCK:
-        old=read_settings()
+        previous=read_settings()
+        old=copy.deepcopy(previous)
         if 'shared' in body:
             dest=old.setdefault('shared',{})
             for key,value in body['shared'].items():
                 if key not in {'provider','endpoint','model','api_version','api_key'} or not isinstance(value,str) or '\n' in value or '\r' in value:raise ValueError('Invalid default API setting.')
+                value=value.strip()
                 if key=='api_key' and not value:continue
-                dest[key]=value.strip()
+                dest[key]=value
         for role in body.get('inherit',[]):
             if role not in ROLES:raise ValueError('Unknown API role.')
             old.setdefault('roles',{}).pop(role,None)
@@ -137,13 +189,15 @@ def save_settings(body):
             dest=old.setdefault('roles',{}).setdefault(role,{})
             for key,value in fields.items():
                 if key not in {'provider','endpoint','model','api_version','api_key'}:raise ValueError('Unknown API field.')
-                if key=='api_key' and not value:continue
                 if not isinstance(value,str) or '\n' in value or '\r' in value:raise ValueError('Invalid API setting.')
-                dest[key]=value.strip()
+                value=value.strip()
+                if key=='api_key' and not value:continue
+                dest[key]=value
         for key,value in body.get('interpreters',{}).items():
             if key not in DEFAULTS or not Path(value).is_file():raise ValueError(f'Python executable not found: {key}')
             old.setdefault('interpreters',{})[key]=str(Path(value).expanduser().absolute())
         env=environment(old)
+        protect_saved_credentials(previous, old, body, env)
         for role in (ROLES if 'shared' in body else body.get('roles',{})):load_config(role,env=env,require_key=False,validate_capabilities=False)
         SETTINGS.parent.mkdir(parents=True,exist_ok=True)
         temp=SETTINGS.with_suffix('.tmp')
@@ -176,7 +230,7 @@ def environment_status():
     for profile in result['profiles']:
         profile['suggested_python']=interpreters.get(profile['roles'][0],'')
     for record in result['environments']:
-        record['limitations']=[]
+        record.setdefault('limitations',[])
         if record['profile']=='core' and not record.get('validation',{}).get('versions',{}).get('matplotlib'):
             record['limitations'].append('3D animation: Matplotlib validation required.')
     return result
@@ -208,12 +262,16 @@ OPS={'reprojection','filter','convert','pose','triangulate','preprocess','previe
 
 def run_job(job):
     folder=Path(job['folder'])
+    process_lock=job.setdefault('_process_lock',threading.Lock())
     try:
         command,env=worker_command(job['op'],job['fields'],job.get('tabs',{}),folder)
-        job['status']='running'
-        flags=getattr(subprocess,'CREATE_NO_WINDOW',0)
-        process=subprocess.Popen(command,cwd=ROOT,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',creationflags=flags)
-        job['process']=process
+        with process_lock:
+            if job.get('cancelled'):
+                job['status']='cancelled'
+                return
+            job['status']='running'
+            process=subprocess.Popen(command,cwd=ROOT,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace',**process_group_options())
+            job['process']=process
         for line in process.stdout:
             line=redact(line.rstrip())
             with LOCK:job['log']=(job['log']+[line])[-100:]
@@ -226,11 +284,27 @@ def run_job(job):
             job['result']=json.loads((folder/'result.json').read_text(encoding='utf-8'))
             job['status']='completed'
     except Exception as exc:
-        job['status']='failed';job['error']=redact(str(exc))
+        job['status']='cancelled' if job.get('cancelled') else 'failed'
+        if not job.get('cancelled'):job['error']=redact(str(exc))
     finally:
-        job.pop('process',None)
+        with process_lock:
+            if job.get('cancelled') and job.get('process') and not job.get('_tree_stopped'):
+                terminate_process_tree(job['process'])
+            job.pop('process',None)
         job['finished_at']=datetime.now().isoformat()
         BUSY.release()
+
+
+def cancel_job(job):
+    """Keep the task slot occupied until its full process group is stopped."""
+    with job.setdefault('_process_lock',threading.Lock()):
+        if job['status'] in {'completed','failed','cancelled'}:
+            return {'status':job['status']}
+        job['cancelled']=True
+        if job.get('process'):
+            terminate_process_tree(job['process'])
+            job['_tree_stopped']=True
+        return {'status':'cancelling'}
 
 
 def start_job(body):
@@ -258,7 +332,7 @@ def start_job(body):
 
 
 def public_job(job):
-    return {k:v for k,v in job.items() if k not in {'process','fields','folder','tabs'}}
+    return {k:v for k,v in job.items() if k not in {'process','fields','folder','tabs'} and not k.startswith('_')}
 
 
 def preview_frames(body):
@@ -381,7 +455,7 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 return self.send({'error':'Not found'},404)
             except Exception as exc:return self.send({'error':redact(str(exc))},400)
-        static={'/ui/stage4_preview.js':'stage4_preview.js','/ui/stage1_review.js':'stage1_review.js','/ui/workbench.js':'workbench.js','/ui/environment_page.js':'environment_page.js','/ui/task_views.js':'task_views.js','/ui/api_settings_files.js':'api_settings_files.js','/ui/style.css':'style.css'}
+        static={'/ui/review_state.js':'review_state.js','/ui/stage4_preview.js':'stage4_preview.js','/ui/stage1_review.js':'stage1_review.js','/ui/workbench.js':'workbench.js','/ui/environment_page.js':'environment_page.js','/ui/task_views.js':'task_views.js','/ui/api_settings_files.js':'api_settings_files.js','/ui/style.css':'style.css'}
         if route not in static:return self.send({'error':'Not found'},404)
         file=UI/static[route];data=file.read_bytes();self.send_response(200)
         self.send_header('Content-Type',('text/javascript' if file.suffix=='.js' else 'text/css')+'; charset=utf-8')
@@ -428,25 +502,9 @@ class Handler(BaseHTTPRequestHandler):
                 finally:log.close()
                 return self.send({'status':'starting','url':'http://127.0.0.1:7861/'})
             if route=='/api/cancel':
-                job=JOBS[body['id']];job['cancelled']=True
-                if job.get('process'):
-                    if os.name=='nt':subprocess.run(['taskkill','/PID',str(job['process'].pid),'/T','/F'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-                    else:job['process'].terminate()
-                return self.send({'status':'cancelling'})
-            if route=='/api/reviews':
-                dest=allowed_path(body['output']);dest.mkdir(parents=True,exist_ok=True)
-                target=dest/f'review-{datetime.now().strftime("%Y%m%d-%H%M%S")}-{secrets.token_hex(3)}.json'
-                target.write_text(json.dumps(body['reviews'],ensure_ascii=False,indent=2),encoding='utf-8')
-                reviewed=dest.parent/'reviewed_descriptions'
-                reviewed.mkdir(exist_ok=True)
-                for frame,record in body['reviews'].items():
-                    if not str(frame).isdigit():raise ValueError('Invalid review frame ID.')
-                    original=record.get('original')
-                    if not isinstance(original,dict):continue
-                    updated={k:str(record.get(k+'-revised','')).strip() or v for k,v in original.items()}
-                    file=reviewed/f'{str(frame).zfill(8)}.json'
-                    file.write_text(json.dumps(updated,ensure_ascii=False,indent=2),encoding='utf-8')
-                return self.send({'path':str(target),'reviewed_descriptions':str(reviewed)})
+                return self.send(cancel_job(JOBS[body['id']]))
+            if route=='/api/review-source':return self.send(review_source(body.get('descriptions')))
+            if route=='/api/reviews':return self.send(save_review_batch(body))
             return self.send({'error':'Not found'},404)
         except Exception as exc:self.send({'error':redact(str(exc))},400)
 

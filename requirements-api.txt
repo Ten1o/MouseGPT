@@ -1,0 +1,10 @@
+# CPU-only hosted VLM, embedding, session packaging, and semantic search.
+-r requirements-assets.txt
+numpy>=1.26,<3
+pandas>=2.2,<4
+scipy>=1.13,<2
+tables>=3.9,<4
+requests>=2.32,<3
+openai>=3.26.1,<4
+Pillow>=10.4,<13
+tqdm>=4.66,<5

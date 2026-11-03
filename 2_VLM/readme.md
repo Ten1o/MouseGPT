@@ -2,13 +2,13 @@
 
 MouseGPT combines mouse images with kinematic information to generate structured behavior descriptions. This directory provides the inference client, model-serving integration, image preprocessing, annotation utilities, and training dataset registration.
 
-**Inputs:** mouse images and natural-language prompts, with optional kinematic context.
+**Inputs:** mouse images and natural-language prompts, with optional measured kinematic context.
 
 **Outputs:** model-generated descriptions for downstream behavior analysis.
 
 [Model repository](https://huggingface.co/Ten1o/MouseGPT) · [Example dataset](https://huggingface.co/datasets/Ten1o/MouseGPT-examples) · [Stage 3: behavior analysis](../3_applications/readme.md)
 
-> **Checkpoint availability:** model uploads are forthcoming. You can download and validate the example inputs now; model inference requires a complete local checkpoint and a running model server.
+> **Choose a model route:** use a hosted, image-capable API with the `VISION` configuration, or serve MouseGPT weights locally with SWIFT. The hosted route needs no local GPU or MouseGPT checkpoint. Local checkpoint uploads are forthcoming; only the local-serving route requires those weights.
 
 ## Inspect the example inputs
 
@@ -22,6 +22,48 @@ python 2_VLM/prompt_test/client_test.py --validate-only
 This downloads `test_data.jsonl` and ten images into `2_VLM/prompt_test/data/`. Each example contains a `query`, an `images` list, and an illustrative `response`. Image paths are relative to the JSONL file. The inference client sends only the query and images; the stored response is not included in the model input.
 
 Input validation uses the Python standard library and does not require a GPU or model installation.
+
+## Use a hosted VLM
+
+For a complete image-to-search example, follow the [researcher quick start](../README.md#quick-start-use-a-hosted-vlm). The hosted client reads `VISION` from the repository-root `.env.local`; it supports services exposing OpenAI-compatible image chat completions, including Azure deployments and the provider presets in [CONFIGURATION.md](../CONFIGURATION.md).
+
+From the repository root, with the API environment active:
+
+```bash
+python -m pip install -r requirements-api.txt
+python scripts/download_assets.py vlm-demo
+python -m mousegpt_config --role VISION
+python 2_VLM/prompt_test/client_test.py \
+  --backend api --limit 3 --output-dir runs/api-demo/demo
+```
+
+This sends the selected prompts and images to the configured provider and may incur API charges. The `response` field in the downloaded JSONL is never included in the request. The model must return nonempty strings for `Overall`, `Head`, `Limb`, `Torso`, `Others`, and `Keywords`.
+
+The output is ready for [Stage 3 session packaging](../3_applications/readme.md#build-a-session-from-your-descriptions):
+
+```text
+runs/api-demo/demo/
+├── descriptions/       # Validated FRAME_ID.json files
+├── images/             # Matching FRAME_ID.jpg previews
+├── raw_descriptions/   # Original provider response per frame
+└── manifest.json       # Model identity and input/output hashes
+```
+
+The first image's numeric filename stem becomes the eight-digit frame ID. For another JSONL, provide an explicit numeric `frame_id` when image names are not numeric. IDs must be unique. A record with several images keeps all of them in the model request; the first image supplies its preview. Do not substitute row numbers for original camera frame IDs when processing experimental recordings.
+
+| API-client option | Meaning |
+| --- | --- |
+| `--backend api` | Use the configured VISION service. The default backend remains `swift` for local deployment compatibility. |
+| `--input PATH.jsonl` | Read prompts and image paths from another JSONL. Relative image paths resolve from this file. |
+| `--limit N` | Run the first N records; start with a small sample. |
+| `--output-dir PATH` | Session output directory. Use a new location for a new model or input set. |
+| `--model MODEL_ID` | Explicitly override the VISION model/deployment. |
+| `--max-attempts N` | Finite attempts per record; default 3. Authentication and other non-transient rejections stop without repeated requests. |
+| `--timeout SECONDS` | Request timeout. |
+| `--max-tokens N` | Completion budget; default 2,000. Some reasoning models spend part of this budget on reasoning. |
+| `--validate-only` | Validate local prompt records and image paths without inference. |
+
+Unchanged completed records can resume. The client rejects reuse of an output directory when model configuration, inputs, or completed outputs differ from its manifest. It also rejects incomplete or malformed descriptions; failed model responses are saved separately under `failed_responses/`, with the diagnostic path reported by the command. They are never treated as completed frames. Inspect a failure before retrying; if a reasoning model exhausts its completion budget, choose a larger budget in a new run. `--base-url` and `--api-key-env` belong to the local SWIFT route; choose hosted endpoints and credentials through the VISION configuration.
 
 ## Serve a MouseGPT model
 
@@ -56,14 +98,14 @@ CUDA_VISIBLE_DEVICES=0 swift deploy \
 
 These examples allocate eight GPUs to Large and one GPU to Lite. Required GPU memory depends on the checkpoint, precision, context length, and inference backend. Both examples use the default server port, `8000`.
 
-## Run inference
+## Run local SWIFT inference
 
 In a second terminal, run from the repository root:
 
 ```bash
 python -m pip install -r 2_VLM/prompt_test/requirements-client.txt
 python 2_VLM/prompt_test/client_test.py \
-  --base-url http://localhost:8000/v1 --limit 1
+  --backend swift --base-url http://localhost:8000/v1 --limit 1
 ```
 
 Remove `--limit 1` to process all examples. The client selects the model automatically if the endpoint advertises exactly one model; otherwise specify `--model <served-model-id>`. Set `MOUSEGPT_SERVING_API_KEY` if your SWIFT server requires authentication; this is separate from the repository-wide `MOUSEGPT_API_KEY` used for external model APIs.
@@ -83,7 +125,7 @@ By default, descriptions are written to `2_VLM/prompt_test/output/output_des/`; 
 
 ## Prepare images and kinematic prompts
 
-The utilities in [data_prepareation/](data_prepareation/) prepare synchronized camera views and kinematics for annotation. Run the commands below from the repository root. Image preprocessing requires NumPy, SciPy, Pillow, and tqdm; video extraction requires FFmpeg.
+The utilities in [data_prepareation/](data_prepareation/) prepare synchronized camera views and kinematics for annotation. Run the commands below from the repository root. Image preprocessing requires NumPy, SciPy, Pillow, and tqdm; video extraction requires FFmpeg 6 or newer.
 
 ### 1. Extract synchronized frames
 
@@ -117,11 +159,11 @@ The script creates 512 × 512 image crops under `pre_images/data3/` and `pre_ima
 
 ### 3. Generate structured annotations
 
-`prompt_request.py` sends synchronized image pairs and velocity context to the configured vision API. Install `requests` and `tqdm`, copy the repository-root `.env.example` to `.env.local`, and fill `MOUSEGPT_API_KEY` for the default official OpenAI API. Set `MOUSEGPT_VISION_MODEL` in the same file if the default is unavailable:
+`prompt_request.py` sends synchronized image pairs and measured velocity context to the configured VISION API. Use the root `requirements-api.txt` environment and the same `.env.local` configuration as the hosted client. Select an image-capable model using `MOUSEGPT_VISION_MODEL` and the relevant provider settings:
 
 ```bash
 python 2_VLM/data_prepareation/prompt_request.py \
-  --data_folder /path/to/session
+  --data_folder /path/to/session --workers 1
 ```
 
 Camera frame IDs and velocity records must match. Each validated description contains `Overall`, `Head`, `Limb`, `Torso`, `Others`, and `Keywords`. Raw API responses are saved in `raw_descriptions/`, and validated JSON objects in `descriptions/`.
@@ -146,7 +188,7 @@ python 2_VLM/prompt_test/prompt_test.py \
   --base-url http://localhost:8000/v1
 ```
 
-Image-list entries are relative to the list file, and logs use the matching image stem, such as `00000012.json`. This utility requires a SWIFT-compatible endpoint and OpenCV for its image previews. Use `--model` to select a served model explicitly. The separate `all_data_test.py` utility targets an external Azure deployment; use `client_test.py` for the main inference workflow.
+Image-list entries are relative to the list file, and logs use the matching image stem, such as `00000012.json`. This utility requires a SWIFT-compatible endpoint and OpenCV for its image previews. Use `--model` to select a served model explicitly. The separate `all_data_test.py` utility targets an external Azure deployment; use `client_test.py --backend api` for hosted VLMs or `--backend swift` for local MouseGPT serving.
 
 To select cohort records from one or more JSONL files:
 

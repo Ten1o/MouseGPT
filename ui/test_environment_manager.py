@@ -6,6 +6,11 @@ import unittest
 from unittest.mock import patch
 
 import environment_manager as em
+from environment_validation import application_fingerprint
+
+def report(profile, **values):
+    return {"passed":True, "application_fingerprint":application_fingerprint(profile), **values}
+
 
 
 class EnvironmentLifecycle(unittest.TestCase):
@@ -35,7 +40,7 @@ class EnvironmentLifecycle(unittest.TestCase):
                 self.assertEqual(tool.read_bytes(),b'fixture-tool')
 
     def test_platform_recipe_versions_do_not_modify_windows(self):
-        for key,profile,release in [('macos-x86_64','core','2026.11.02.1'),('macos-arm64','agent','2026.11.02.1'),('windows-x86_64','core','2026.10.29.2'),('windows-x86_64','agent','2026.10.29.1')]:
+        for key,profile,release in [('macos-x86_64','core','2026.11.02.1'),('macos-arm64','agent','2026.11.03.1'),('windows-x86_64','core','2026.10.29.2'),('windows-x86_64','agent','2026.11.03.1')]:
             with patch.object(em,'platform_key',return_value=key):self.assertEqual(em.profile_spec(profile)['release'],release)
 
     def test_linux_bootstrap_extracts_hash_checked_uv(self):
@@ -58,7 +63,7 @@ class EnvironmentLifecycle(unittest.TestCase):
                         commands.append([str(a) for a in args])
                         if 'venv' in args:
                             executable=Path(args[-1])/('Scripts/python.exe' if key=='windows-x86_64' else 'bin/python');executable.parent.mkdir(parents=True);executable.touch()
-                        if str(args[-1]).endswith('.json'):em.atomic_json(Path(args[-1]),{'passed':True,'python':spec['python'],'checks':['fixture']})
+                        if str(args[-1]).endswith('.json'):em.atomic_json(Path(args[-1]),report(profile,python=spec['python'],checks=['fixture']))
                     with patch.object(manager,'bootstrap',return_value=Path(tmp)/'uv'),patch.object(manager,'command',side_effect=command):manager._run('install',profile,None)
                     self.assertEqual(manager.state['status'],'ready',manager.state)
                     row=manager.read_registry()['environments'][0]
@@ -71,7 +76,7 @@ class EnvironmentLifecycle(unittest.TestCase):
     def test_pose_can_be_validated_without_installation_lock(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager=self.manager(tmp);python=Path(tmp)/'python.exe';python.touch()
-            def checked(args):em.atomic_json(Path(args[-1]),{'passed':True,'python':'3.10.18','checks':['MMPose','EasyMocap']})
+            def checked(args):em.atomic_json(Path(args[-1]),report('pose',python='3.10.18',checks=['MMPose','EasyMocap']))
             with patch.object(manager,'command',side_effect=checked):manager._run('check','pose',python)
             self.assertEqual(manager.state['status'],'ready')
             record=manager.read_registry()['environments'][0]
@@ -92,7 +97,7 @@ class EnvironmentLifecycle(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             manager=self.manager(tmp);python=Path(tmp)/'python.exe';python.touch()
             def checked(args):
-                report=Path(args[-1]);em.atomic_json(report,{'passed':True,'python':'3.12.11','checks':['offline check']})
+                target=Path(args[-1]);em.atomic_json(target,report('core',python='3.12.11',checks=['offline check']))
             with patch.object(manager,'command',side_effect=checked):manager._run('check','core',python)
             self.assertEqual(manager.state['status'],'ready')
             registry=manager.read_registry();self.assertFalse(registry['active'])
@@ -114,7 +119,7 @@ class EnvironmentLifecycle(unittest.TestCase):
     def test_settings_failure_does_not_mark_environment_active(self):
         with tempfile.TemporaryDirectory() as tmp:
             manager=self.manager(tmp);python=Path(tmp)/'python.exe';python.touch()
-            registry={'schema':1,'environments':[{'id':'candidate','profile':'core','python':str(python),'validation':{'passed':True}}],'active':{'core':'previous'}}
+            registry={'schema':1,'environments':[{'id':'candidate','profile':'core','python':str(python),'validation':report('core')}],'active':{'core':'previous'}}
             em.atomic_json(manager.registry,registry)
             with self.assertRaises(OSError):manager.activate('candidate',persist=lambda _:(_ for _ in ()).throw(OSError('settings unavailable')))
             self.assertEqual(manager.read_registry()['active'],{'core':'previous'})

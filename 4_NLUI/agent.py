@@ -13,7 +13,7 @@ from runtime_config import (
     image_files,
     session_config, validate_frame_ids,
 )
-from mousegpt_config import load_config
+from mousegpt_config import chat_request_options, load_config
 
 configure_tracing()
 
@@ -26,12 +26,12 @@ gpt_tools = [tool_cluster, PythonREPLTool(), tool_behavior, tool_search, tool_ou
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 
-from langchain.agents import create_tool_calling_agent
+from langchain_classic.agents import create_tool_calling_agent
 
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from langchain.agents import AgentExecutor
+from langchain_classic.agents import AgentExecutor
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.callbacks import BaseCallbackHandler, StdOutCallbackHandler
@@ -52,22 +52,23 @@ prompt = ChatPromptTemplate.from_messages([
 ])
 
 agent_config = load_config("AGENT")
+agent_temperature = chat_request_options(agent_config, max_tokens=4096, temperature=0).get("temperature")
 if agent_config.provider == "azure_openai":
     chat_model = AzureChatOpenAI(
         azure_endpoint=agent_config.endpoint,
         azure_deployment=agent_config.model,
         api_version=agent_config.api_version,
         api_key=agent_config.api_key,
-        # Some Azure deployments only accept the model default.  Older
-        # langchain-openai releases otherwise serialize their 0.7 default.
-        temperature=1,
+        temperature=None,
+        timeout=60, max_retries=2,
     )
 else:
     chat_model = ChatOpenAI(
         model=agent_config.model,
         api_key=agent_config.api_key,
-        **({"temperature": 0} if agent_config.provider == "openai" else {}),
-        **({"base_url": agent_config.endpoint} if agent_config.provider != "openai" else {}),
+        temperature=agent_temperature,
+        base_url=agent_config.endpoint,
+        timeout=60, max_retries=2,
     )
 
 agent = create_tool_calling_agent(chat_model, gpt_tools, prompt)
@@ -177,7 +178,8 @@ async def input_handler(input_text, chat_history, user_id, file_name_display, co
 
 
 
-if __name__ == "__main__":
+def build_interface():
+    """Build the local UI without starting a server or making a model request."""
 
     h5_files = get_h5_files()
     if not h5_files:
@@ -201,7 +203,6 @@ if __name__ == "__main__":
         with gr.Row():
             with gr.Column(scale=1):
                 chatbot = gr.Chatbot(
-                    type="messages",
                     label="Agent",
                     height=700
                 )
@@ -226,4 +227,16 @@ if __name__ == "__main__":
 
     # Tool configuration is shared in this research demo; serialize requests.
     demo.queue(default_concurrency_limit=1)
-    demo.launch(server_name="127.0.0.1", server_port=int(os.environ.get('MOUSEGPT_NLUI_PORT','7860')), share=False)
+    return demo
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Open the local MouseGPT session interface.")
+    parser.add_argument("--check", action="store_true", help="Validate local setup and build the interface without serving or API calls")
+    args = parser.parse_args()
+    demo = build_interface()
+    if args.check:
+        print("Interface ready: configuration, session and components validated. Provider access was not tested.")
+    else:
+        demo.launch(server_name="127.0.0.1", server_port=int(os.environ.get("MOUSEGPT_NLUI_PORT", "7860")), share=False)

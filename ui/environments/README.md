@@ -1,37 +1,54 @@
-# Environment installation matrix
+# Environment installation
 
-Updated 2026-11-02. Core CPU/API and the older tool-calling Agent remain isolated because their OpenAI/LangChain dependency versions differ. Pose automatic installation is still withdrawn; validate and Use a manually configured environment.
+Core CPU/API and the tool-calling Agent use separate, reproducible environments. The Agent recipe shares the public `4_NLUI/requirements.txt` contract and uses Python 3.12, Gradio 6 and LangChain Classic. Pose estimation still requires a manually prepared environment with the appropriate GPU libraries, models and calibration tools.
 
-## Current automatic installation targets
+## Installation targets
 
-| Platform | Core | Agent | Runtime evidence |
-| --- | --- | --- | --- |
-| Windows x64 | Existing recipe | Existing recipe | Earlier Windows clean-install evidence retained |
-| Linux x64, glibc 2.28+ | Separate locked recipe | Separate locked recipe | Ubuntu installation user-confirmed; broader Linux verification pending |
-| Linux ARM64, glibc 2.28+ | Separate locked recipe | Separate locked recipe | Real-machine verification pending |
-| macOS 14+ Intel | Platform-specific Numba pin | Separate locked recipe | Real-machine verification pending |
-| macOS 14+ Apple Silicon | Separate locked recipe | Platform-specific PyTables/Blosc2 pins | Real-machine verification pending |
+| Platform | Core | Agent |
+| --- | --- | --- |
+| Windows x64 | Hash-locked recipe | Hash-locked Python 3.12 recipe |
+| Linux x64, glibc 2.28+ | Hash-locked recipe | Hash-locked Python 3.12 recipe |
+| Linux ARM64, glibc 2.28+ | Hash-locked recipe | Hash-locked Python 3.12 recipe |
+| macOS 14+ Intel | Platform-specific Numba pin | Hash-locked Python 3.12 recipe |
+| macOS 14+ Apple Silicon | Hash-locked recipe | Hash-locked Python 3.12 recipe |
 
-Windows ARM64, 32-bit systems, musl/Alpine Linux, glibc older than 2.28 and macOS older than 14 require manual setup. This table describes implemented installation targets, not a claim that every listed system has passed end-to-end tests. Each installed candidate still runs dependency and actual small-data checks before it can be registered and activated.
+Windows ARM64, 32-bit systems, musl/Alpine Linux, glibc older than 2.28 and macOS older than 14 require manual setup. Each environment must pass its local checks before it can be selected. Resolving a platform recipe establishes package and wheel availability; it does not establish execution on that platform or compatibility with every model service.
 
-`platform-matrix.json` records ten recipe hashes, Python versions, notable dependency versions and evidence status. `validation.json` retains the earlier Windows runtime evidence. No new-platform runtime success is fabricated.
+The current Apple Silicon Agent recipe has passed an isolated managed install, dependency check and actual application startup on macOS. Its checks used synthetic data and made no model requests. The other four updated Agent recipes have been resolved for their targets; current-release runtime checks on those systems remain pending.
 
-## Dependency recipes
+`platform-matrix.json` records the recipe hashes, Python versions, notable dependency versions and runtime verification status. `validation.json` records the scope of completed runtime checks. Earlier release checks do not validate a newer Agent recipe.
 
-Base direct dependencies are in core.in / agent.in. Generated lock files pin the complete closure and artifact hashes. Windows retains core.lock / agent.lock unchanged; other platforms select profile-platform.lock. Installation never resolves fresh package versions or falls back to building native packages from source.
+## Install, validate and use
 
-The Intel Mac Core recipe fixes Numba at 0.61.2 because the baseline newer Numba has no matching Intel wheel. The Apple Silicon Agent recipe uses PyTables 3.10.1 and Blosc2 2.7.1 because PyTables 3.8.0/3.9.2 lack the needed native wheel. Only these platform recipes receive release 2026.11.02.1; Windows and current Linux releases are preserved.
+Select **Install & validate** to create a new environment, or enter an existing Python executable and select **Validate existing environment**. Then select **Use**. Existing environments and user configuration are preserved if installation or validation fails.
 
-All six newly added target recipes were resolved on Windows using uv target-platform/Python selection and binary-only packages. This checks wheel availability and metadata compatibility, not imports, native ABI, SDK behavior or real task performance on another OS. The three new uv bootstrap wheels were downloaded and hash/layout checked without executing foreign binaries.
+Validation checks HDF5 round trips, numerical operations and image handling. Core also exercises UMAP, video encoding, trajectory filtering and spreadsheet export. Agent validation runs the repository's actual `4_NLUI/agent.py --check` with a temporary session and image directory. It blocks network connections and supplies fake credentials; no provider requests are made.
 
-## Isolation and validation
+Validation reports include a fingerprint of the relevant application code and dependency requirements. When these change, an older environment appears as **Revalidate** and cannot be activated or used for processing until it passes the current checks. This also prevents an old Gradio/LangChain environment from being treated as compatible with an updated Agent.
 
-The fixed uv 0.8.22 bootstrap is downloaded from PyPI and verified by a pinned SHA-256. macOS/Linux tools are cached per platform, with executable permissions set after verification. Managed Python is downloaded into application storage; virtual environments use Scripts/python.exe on Windows and bin/python elsewhere, without resolving venv interpreter symlinks to the base Python.
+## Reproducible dependencies
 
-Installation uses a new unique directory and never upgrades an existing environment in place. Dependency checks and the offline environment_probe.py small-data checks must pass before registration; Use is an explicit separate action. Failed or cancelled operations do not replace the active environment. Core validation needs 1_keypoints/demo/batch_vis.py and video_utils.py in the checkout. Installing an environment does not upload Stage code, data or model weights.
+Direct dependencies are in `core.in` and `agent.in`. Agent inherits the public application requirements rather than maintaining a separate API stack. Generated lock files pin the dependency closure and artifact hashes. Windows uses `core.lock` and `agent.lock`; other platforms use `PROFILE-PLATFORM.lock`. Installation accepts binary wheels only and never upgrades an existing environment in place.
 
-macOS defaults to ~/Library/Application Support/MouseGPT, retaining a pre-existing ~/.local/share/MouseGPT installation. Linux honors XDG_DATA_HOME; MOUSEGPT_UI_HOME can explicitly select an application directory. Existing Windows paths and environments are preserved.
+The Core Intel Mac recipe pins Numba 0.61.2 for wheel compatibility. Core recipes retain their existing releases; the updated Agent release is `2026.11.03.1` on all five targets.
 
-The UI server still needs a host Python to start. Cross-platform environment installation does not create a standalone desktop application or support mobile devices.
+To regenerate an Agent recipe with uv 0.8.22 from the repository root:
 
-See the [UI user guide](../README.md) for setup instructions and feature status.
+```bash
+uv pip compile ui/environments/agent.in \
+  --python-version 3.12.11 --python-platform aarch64-apple-darwin \
+  --generate-hashes --only-binary :all: --no-header \
+  --output-file ui/environments/agent-macos-arm64.lock
+```
+
+Use the corresponding target and output filename for each platform, then update the hashes in `platform-matrix.json`. Run an actual installation and validation before recording runtime success for a target.
+
+The UI downloads a fixed uv bootstrap wheel from PyPI, verifies its SHA-256, and installs managed Python into application storage. macOS/Linux executables are cached separately by platform. The environment's own Python path is retained rather than resolving its symlink to the base interpreter.
+
+## Storage and remote use
+
+macOS defaults to `~/Library/Application Support/MouseGPT`, retaining a pre-existing `~/.local/share/MouseGPT` installation. Linux honors `XDG_DATA_HOME`; `MOUSEGPT_UI_HOME` can select a different application directory. Windows uses the local application-data directory.
+
+Installation requires internet access and at least 3 GB of free space, plus space for datasets. Processing and environments live on the machine hosting the UI. Cancelling an installation stops its process tree; a cancelled candidate is never activated.
+
+The UI server still requires Python to start. This is a browser workbench, not a standalone desktop package. See the [UI user guide](../README.md) for the workflow and remote-access instructions.
