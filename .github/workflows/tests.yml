@@ -19,8 +19,6 @@ jobs:
       GRADIO_ANALYTICS_ENABLED: "False"
       LANGCHAIN_TRACING_V2: "false"
       LANGSMITH_TRACING: "false"
-      MOUSEGPT_UI_HOME: ${{ runner.temp }}/mousegpt-ui-tests
-      MPLCONFIGDIR: ${{ runner.temp }}/mousegpt-matplotlib
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -42,6 +40,9 @@ jobs:
       - name: Check dependency compatibility
         run: python -m pip check
       - name: Run offline regression and workflow tests
+        env:
+          MOUSEGPT_UI_HOME: ${{ runner.temp }}/mousegpt-ui-tests
+          MPLCONFIGDIR: ${{ runner.temp }}/mousegpt-matplotlib
         run: >-
           python -m pytest -c pytest.ini tests 4_NLUI/tests ui
           1_keypoints/tests/test_batch_vis_ui.py
