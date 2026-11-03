@@ -80,7 +80,9 @@ class EnvironmentLifecycle(unittest.TestCase):
             with patch.object(manager,'command',side_effect=checked):manager._run('check','pose',python)
             self.assertEqual(manager.state['status'],'ready')
             record=manager.read_registry()['environments'][0]
-            self.assertEqual(manager.activate(record['id']),{'pose':str(python.resolve())})
+            activated=manager.activate(record['id'])
+            self.assertEqual(set(activated),{'pose'})
+            self.assertEqual(Path(activated['pose']).resolve(),python.resolve())
             with self.assertRaises(ValueError):manager.start('install','pose')
 
     def test_failed_validation_does_not_register_or_replace_active(self):

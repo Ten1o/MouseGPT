@@ -44,11 +44,11 @@ class ValidationFreshnessTests(unittest.TestCase):
             initial = application_fingerprint("agent", folder)
             self.assertEqual(initial, application_fingerprint("agent"))
             requirements = folder / "4_NLUI/requirements.txt"
-            requirements.write_text(requirements.read_text() + "\nnew-library==1.0\n")
+            requirements.write_text(requirements.read_text(encoding="utf-8") + "\nnew-library==1.0\n", encoding="utf-8")
             self.assertNotEqual(initial, application_fingerprint("agent", folder))
             shutil.copyfile(ROOT / "4_NLUI/requirements.txt", requirements)
             code = folder / "4_NLUI/agent.py"
-            code.write_text(code.read_text() + "\n# changed application\n")
+            code.write_text(code.read_text(encoding="utf-8") + "\n# changed application\n", encoding="utf-8")
             self.assertNotEqual(initial, application_fingerprint("agent", folder))
 
     def test_current_reports_are_profile_specific(self):

@@ -102,7 +102,7 @@ class BackendTests(unittest.TestCase):
             for i in range(1,9):(videos/f'data{i}.mp4').touch();(calibration/f'Camera{i}_params.mat').touch()
             fields={'tri':str(source),'videos':str(videos),'calibration':str(calibration),'calibrationUnit':'mm'}
             args=reprojection_inputs(fields)
-            self.assertEqual(args[3],root/'reprojection');self.assertEqual(args[-2:],('m','mm'))
+            self.assertEqual(args[3].resolve(),(root/'reprojection').resolve());self.assertEqual(args[-2:],('m','mm'))
             self.assertFalse(args[3].exists())
             with self.assertRaisesRegex(ValueError,'unit'):reprojection_inputs({**fields,'calibrationUnit':''})
             (root/'reprojection').mkdir();(root/'reprojection/data1.mp4').touch()
